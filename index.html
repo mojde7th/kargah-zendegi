@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>سیستم‌عامل شخصی — نسخه کامل</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+body{margin:0;padding:28px 16px 80px;background:#0a0e14;color:#eef4fa;font:18px/1.85 Vazirmatn,Tahoma,sans-serif}
+h1{color:#7dd3c7;font-size:1.35rem;margin:0 0 8px}
+.sub{color:#9bb0c3;margin:0 0 18px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
+button,select{font:600 14px Vazirmatn,sans-serif;background:#0d1117;color:#eef4fa;border:1px solid #334155;border-radius:10px;padding:8px 12px;min-height:40px}
+.card{display:block;background:#151b24;border:1px solid #334155;border-radius:14px;padding:14px 16px;margin:10px 0;color:inherit;text-decoration:none}
+.card:hover{border-color:#7dd3c7}
+.card h2{margin:0 0 6px;font-size:1.05rem;color:#7dd3c7}
+.meta{color:#9bb0c3;font-size:.92rem}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:.9rem}
+.pill{background:#0d1117;border:1px solid #334155;border-radius:999px;padding:2px 10px}
+.pill.ok{border-color:#86e0a3;color:#86e0a3}
+.pill.warn{border-color:#f0c14b;color:#f0c14b}
+.note{color:#9bb0c3;font-size:.88rem;margin-top:20px}
+code{direction:ltr;display:inline-block}
+#wk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#14352e;color:#86e0a3;border:1px solid #86e0a3;padding:10px 18px;border-radius:12px;z-index:80;font:600 15px Vazirmatn,sans-serif;display:none}
+</style>
+</head>
+<body>
+<h1>فهرست — نسخه کامل</h1>
+<p class="sub">کارگاه صفحه‌به‌صفحه با نقشه بزرگ، روتین ساعت‌به‌ساعت، خرید، آرایش، و گالری. پیشرفت در همین مرورگر ذخیره می‌شود.</p>
+<div class="bar">
+  <label>چینش
+    <select id="sort">
+      <option value="updated">تازه‌ترین</option>
+      <option value="unread">نخوانده اول</option>
+      <option value="progress">بیشترین صفحه</option>
+      <option value="title">نام</option>
+    </select>
+  </label>
+  <button type="button" id="btnExport">دانلود وضعیت</button>
+</div>
+<div id="list"></div>
+<p class="note">نسخهٔ قدیمی‌تر روی آدرس جدا مانده و اینجا عوض نمی‌شود.</p>
+<script>
+const GUIDES = [
+  {
+    id: "kargah-zendegi-v1",
+    title: "کارگاه کامل — بازترکیب و سبک زندگی",
+    href: "workshop-personal-os.html",
+    pages: 162,
+    updated: "2026-10-14",
+    blurb: "بازترکیب چهار به چهار، روتین، خرید، آرایش لافار، فانکشنال، واکسن؛ عکس‌ها قابل دانلود"
+  }
+];
+function readState(key) {
+  try {
+    const s = JSON.parse(localStorage.getItem(key) || "{}");
+    const done = s.done || {};
+    let n = 0;
+    Object.keys(done).forEach((k) => { if (done[k]) n++; });
+    return { done: n, page: (s.page || 0) + 1, hasNotes: !!(s.notes && Object.keys(s.notes).some((k) => s.notes[k])) };
+  } catch (e) { return { done: 0, page: 1, hasNotes: false }; }
+}
+function paint() {
+  const sort = document.getElementById("sort").value;
+  const rows = GUIDES.map((g) => Object.assign({}, g, readState(g.id), { ratio: readState(g.id).done / g.pages }));
+  rows.sort((a, b) => {
+    if (sort === "updated") return b.updated.localeCompare(a.updated);
+    if (sort === "unread") return a.ratio - b.ratio;
+    if (sort === "progress") return b.done - a.done;
+    return a.title.localeCompare(b.title, "fa");
+  });
+  document.getElementById("list").innerHTML = rows.map((g) => {
+    const unread = g.done === 0;
+    const status = unread ? "نخوانده" : (g.done >= g.pages ? "تمام" : "نیمه‌کاره");
+    return '<a class="card" href="' + g.href + '"><h2>' + g.title + '</h2><p class="meta">' + g.blurb + '</p><div class="row">' +
+      '<span class="pill ' + (unread ? "warn" : "ok") + '">' + status + '</span>' +
+      '<span class="pill">خوانده ' + g.done + ' از ' + g.pages + '</span>' +
+      '<span class="pill">صفحه ' + g.page + '</span>' +
+      '<span class="pill">به‌روز ' + g.updated + '</span>' +
+      (g.hasNotes ? '<span class="pill">یادداشت</span>' : "") +
+      "</div></a>";
+  }).join("");
+}
+document.getElementById("sort").onchange = paint;
+document.getElementById("btnExport").onclick = () => {
+  let out = "personal-os-kamel\n" + new Date().toISOString() + "\n\n";
+  GUIDES.forEach((g) => { const st = readState(g.id); out += g.title + " — " + st.done + "/" + g.pages + "\n"; });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([out], { type: "text/plain;charset=utf-8" }));
+  a.download = "personal-os-kamel-status.txt";
+  a.click();
+};
+function toast(msg) {
+  let el = document.getElementById("wk-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "wk-toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = "block";
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display = "none"; }, 2400);
+}
+paint();
+(function () {
+  const g = GUIDES[0];
+  const st = readState(g.id);
+  if (st.done === 0) toast("این کارگاه هنوز نخوانده است");
+  else if (st.done < g.pages) toast("خوانده " + st.done + " از " + g.pages);
+  else toast("کارگاه تمام شده");
+})();
+</script>
+</body>
+</html>
