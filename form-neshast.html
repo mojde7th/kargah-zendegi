@@ -74,6 +74,7 @@ textarea{border:1px dashed var(--line);border-radius:4px;padding:8px;background:
   <p class="hint">خانه‌ها: واقعه، نگاه، نقاب و نقش، الگو، دکان، ترس و مبادا، درون، سناریوها، جملهٔ ته.</p>
   <div id="list"></div>
 </div>
+<script src="workshop-sync.js"></script>
 <script>
 const LS = "form-neshast-v1";
 const FIELDS = [
@@ -211,7 +212,8 @@ function load() {
   return SEED.map((x) => Object.assign({}, x));
 }
 function save(items) {
-  localStorage.setItem(LS, JSON.stringify({ items: items }));
+  localStorage.setItem(LS, JSON.stringify({ items: items, t: Date.now() }));
+  if (window.KargahSync && KargahSync.pushSoon) KargahSync.pushSoon();
 }
 function el(tag, attrs, html) {
   const n = document.createElement(tag);
@@ -219,7 +221,7 @@ function el(tag, attrs, html) {
   if (html != null) n.innerHTML = html;
   return n;
 }
-let items = load();
+let items = [];
 const list = document.getElementById("list");
 
 function paint() {
@@ -298,7 +300,12 @@ document.getElementById("btnTxt").onclick = () => {
   a.download = "form-vaghee.txt";
   a.click();
 };
-paint();
+async function start() {
+  try { if (window.KargahSync) await KargahSync.boot(); } catch (e) {}
+  items = load();
+  paint();
+}
+start();
 </script>
 </body>
 </html>

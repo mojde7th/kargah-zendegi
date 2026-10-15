@@ -3,14 +3,18 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>سیستم‌عامل شخصی — نسخه کامل</title>
+<title>فهرست کارگاه زندگی</title>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
 body{margin:0;padding:28px 16px 80px;background:#0a0e14;color:#eef4fa;font:18px/1.85 Vazirmatn,Tahoma,sans-serif}
 h1{color:#7dd3c7;font-size:1.35rem;margin:0 0 8px}
 .sub{color:#9bb0c3;margin:0 0 18px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
-button,select{font:600 14px Vazirmatn,sans-serif;background:#0d1117;color:#eef4fa;border:1px solid #334155;border-radius:10px;padding:8px 12px;min-height:40px}
+button,select,input{font:600 14px Vazirmatn,sans-serif;background:#0d1117;color:#eef4fa;border:1px solid #334155;border-radius:10px;padding:8px 12px;min-height:40px}
+input{min-width:180px}
+.sync{background:#151b24;border:1px solid #334155;border-radius:14px;padding:14px 16px;margin:0 0 18px}
+.sync h2{margin:0 0 8px;font-size:1rem;color:#7dd3c7}
+.sync p{margin:0 0 10px;color:#9bb0c3;font-size:.92rem}
 .card{display:block;background:#151b24;border:1px solid #334155;border-radius:14px;padding:14px 16px;margin:10px 0;color:inherit;text-decoration:none}
 .card:hover{border-color:#7dd3c7}
 .card h2{margin:0 0 6px;font-size:1.05rem;color:#7dd3c7}
@@ -20,76 +24,132 @@ button,select{font:600 14px Vazirmatn,sans-serif;background:#0d1117;color:#eef4f
 .pill.ok{border-color:#86e0a3;color:#86e0a3}
 .pill.warn{border-color:#f0c14b;color:#f0c14b}
 .note{color:#9bb0c3;font-size:.88rem;margin-top:20px}
-code{direction:ltr;display:inline-block}
-#wk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#14352e;color:#86e0a3;border:1px solid #86e0a3;padding:10px 18px;border-radius:12px;z-index:80;font:600 15px Vazirmatn,sans-serif;display:none}
+code{direction:ltr;display:inline-block;unicode-bidi:isolate}
+.prog{height:6px;background:#1a222d;border-radius:99px;margin-top:10px;overflow:hidden}
+.prog i{display:block;height:100%;background:#86e0a3;width:0}
+#wk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#14352e;color:#86e0a3;border:1px solid #86e0a3;padding:10px 18px;border-radius:12px;z-index:80;font:600 15px Vazirmatn,sans-serif;display:none;max-width:90%}
+#roomCode{direction:ltr;text-align:left}
 </style>
 </head>
 <body>
-<h1>فهرست — نسخه کامل</h1>
-<p class="sub">کارگاه صفحه‌به‌صفحه با نقشه بزرگ، روتین ساعت‌به‌ساعت، خرید، آرایش، و گالری. پیشرفت در همین مرورگر ذخیره می‌شود.</p>
+<h1>فهرست کارگاه و سبک زندگی</h1>
+<p class="sub">تیک هر صفحه سبز می‌ماند. درصد خوانده‌شده اینجاست. با کد همگام، لپ‌تاپ و گوشی یکی می‌شوند.</p>
+
+<div class="sync">
+  <h2>همگام بین دستگاه‌ها</h2>
+  <p>یک‌بار «ساخت کد» بزن. همان لینک را روی گوشی باز کن. کد را به همکلاسی نده؛ هر کس کد خودش را بسازد.</p>
+  <p>وضعیت: <span id="syncState">هنوز وصل نیست</span></p>
+  <div class="bar">
+    <button type="button" id="btnMake">ساخت کد همگام</button>
+    <button type="button" id="btnCopyRoom">کپی لینک گوشی</button>
+    <button type="button" id="btnCopyProg">کپی لینک پیشرفت</button>
+    <button type="button" id="btnPull">تازه‌کردن از ابر</button>
+  </div>
+  <div class="bar">
+    <input id="roomIn" type="text" placeholder="کد همگام را اینجا بچسبان" autocomplete="off"/>
+    <button type="button" id="btnJoin">وصل شو</button>
+  </div>
+  <p>کد فعلی: <code id="roomCode">—</code></p>
+</div>
+
 <div class="bar">
   <label>چینش
     <select id="sort">
       <option value="updated">تازه‌ترین</option>
       <option value="unread">نخوانده اول</option>
-      <option value="progress">بیشترین صفحه</option>
+      <option value="progress">بیشترین پیشرفت</option>
       <option value="title">نام</option>
     </select>
   </label>
   <button type="button" id="btnExport">دانلود وضعیت</button>
 </div>
 <div id="list"></div>
-<p class="note">نسخهٔ قدیمی‌تر روی آدرس جدا مانده و اینجا عوض نمی‌شود.</p>
+<p class="note">فرم خالی برای تو و همکلاسی‌هاست. نوشته‌های شخصی جلسهٔ قبلی در این فهرست نیست.</p>
+<p class="note">نسخه‌های قدیمی روی آدرس جدا مانده‌اند؛ تیک‌شان مال همان سایت است.</p>
+<script src="workshop-sync.js"></script>
 <script>
 const GUIDES = [
   {
     id: "kargah-zendegi-v1",
-    title: "کارگاه کامل — بازترکیب و سبک زندگی",
+    title: "کارگاه سبک زندگی",
     href: "workshop-personal-os.html",
     pages: 162,
+    kind: "workshop",
+    updated: "2026-10-15",
+    blurb: "بازترکیب، روتین، خرید، آرایش، واکسن؛ تیک صفحه سبز می‌شود"
+  },
+  {
+    id: "nama-vaghee-form-v2",
+    title: "کارگاه واقعه — ستون‌ها",
+    href: "workshop-vaghee-form.html",
+    pages: 15,
+    kind: "workshop",
+    updated: "2026-10-15",
+    blurb: "نقاب، دکان، ترس؛ صفحه‌به‌صفحه با تیک خواندم"
+  },
+  {
+    id: "nama-neshast-negah-v1",
+    title: "کارگاه جلسه نگاه و نقش",
+    href: "workshop-neshast.html",
+    pages: 23,
+    kind: "workshop",
+    updated: "2026-10-15",
+    blurb: "آموزش ستون‌ها با لحن جلسه"
+  },
+  {
+    id: "form-vaghee-class-v1",
+    title: "فرم خالی واقعه — نوشتن یا گفتن",
+    href: "form-vaghee.html",
+    pages: 0,
+    kind: "form",
+    updated: "2026-10-15",
+    blurb: "برای تو و کلاس. تایپ یا ضبط صدا، رونوشت، پیشنهاد ستون‌ها"
+  },
+  {
+    id: "personal-os-kamel-v2",
+    title: "نسخه کامل قبلی — آدرس جدا",
+    href: "https://mojde7th.github.io/lifestyle-os-kamel/workshop-personal-os.html",
+    pages: 162,
+    kind: "external",
     updated: "2026-10-14",
-    blurb: "بازترکیب چهار به چهار، روتین، خرید، آرایش لافار، فانکشنال، واکسن؛ عکس‌ها قابل دانلود"
+    blurb: "ریپوی قبلی؛ تیک آنجا جداست"
+  },
+  {
+    id: "personal-os-recomp-v1",
+    title: "نسخه کوتاه قبلی — آدرس جدا",
+    href: "https://mojde7th.github.io/lifestyle-os/",
+    pages: 44,
+    kind: "external",
+    updated: "2026-10-14",
+    blurb: "ریپوی اول؛ اینجا عوض نمی‌شود"
   }
 ];
-function readState(key) {
+
+function faNum(n) {
+  return String(n).replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+}
+function readState(g) {
   try {
-    const s = JSON.parse(localStorage.getItem(key) || "{}");
+    const s = JSON.parse(localStorage.getItem(g.id) || "{}");
+    if (g.kind === "form") {
+      const items = s.items || [];
+      const filled = items.filter((it) => it && String(it.vaghee || "").trim()).length;
+      return { done: filled, page: items.length, hasNotes: filled > 0, pct: items.length ? Math.round((filled / items.length) * 100) : 0 };
+    }
     const done = s.done || {};
     let n = 0;
     Object.keys(done).forEach((k) => { if (done[k]) n++; });
-    return { done: n, page: (s.page || 0) + 1, hasNotes: !!(s.notes && Object.keys(s.notes).some((k) => s.notes[k])) };
-  } catch (e) { return { done: 0, page: 1, hasNotes: false }; }
+    const pages = g.pages || 1;
+    return {
+      done: n,
+      page: (s.page || 0) + 1,
+      hasNotes: !!(s.notes && Object.keys(s.notes).some((k) => s.notes[k])),
+      pct: Math.round((n / pages) * 100)
+    };
+  } catch (e) {
+    return { done: 0, page: g.kind === "form" ? 0 : 1, hasNotes: false, pct: 0 };
+  }
 }
-function paint() {
-  const sort = document.getElementById("sort").value;
-  const rows = GUIDES.map((g) => Object.assign({}, g, readState(g.id), { ratio: readState(g.id).done / g.pages }));
-  rows.sort((a, b) => {
-    if (sort === "updated") return b.updated.localeCompare(a.updated);
-    if (sort === "unread") return a.ratio - b.ratio;
-    if (sort === "progress") return b.done - a.done;
-    return a.title.localeCompare(b.title, "fa");
-  });
-  document.getElementById("list").innerHTML = rows.map((g) => {
-    const unread = g.done === 0;
-    const status = unread ? "نخوانده" : (g.done >= g.pages ? "تمام" : "نیمه‌کاره");
-    return '<a class="card" href="' + g.href + '"><h2>' + g.title + '</h2><p class="meta">' + g.blurb + '</p><div class="row">' +
-      '<span class="pill ' + (unread ? "warn" : "ok") + '">' + status + '</span>' +
-      '<span class="pill">خوانده ' + g.done + ' از ' + g.pages + '</span>' +
-      '<span class="pill">صفحه ' + g.page + '</span>' +
-      '<span class="pill">به‌روز ' + g.updated + '</span>' +
-      (g.hasNotes ? '<span class="pill">یادداشت</span>' : "") +
-      "</div></a>";
-  }).join("");
-}
-document.getElementById("sort").onchange = paint;
-document.getElementById("btnExport").onclick = () => {
-  let out = "personal-os-kamel\n" + new Date().toISOString() + "\n\n";
-  GUIDES.forEach((g) => { const st = readState(g.id); out += g.title + " — " + st.done + "/" + g.pages + "\n"; });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([out], { type: "text/plain;charset=utf-8" }));
-  a.download = "personal-os-kamel-status.txt";
-  a.click();
-};
 function toast(msg) {
   let el = document.getElementById("wk-toast");
   if (!el) {
@@ -102,14 +162,99 @@ function toast(msg) {
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.display = "none"; }, 2400);
 }
-paint();
-(function () {
-  const g = GUIDES[0];
-  const st = readState(g.id);
-  if (st.done === 0) toast("این کارگاه هنوز نخوانده است");
-  else if (st.done < g.pages) toast("خوانده " + st.done + " از " + g.pages);
-  else toast("کارگاه تمام شده");
-})();
+function paintSync() {
+  const id = window.KargahSync ? KargahSync.room() : "";
+  document.getElementById("roomCode").textContent = id || "—";
+  document.getElementById("syncState").textContent = id ? "وصل به ابر" : "هنوز وصل نیست";
+}
+function paint() {
+  const sort = document.getElementById("sort").value;
+  const rows = GUIDES.map((g) => {
+    const st = readState(g);
+    return Object.assign({}, g, st, { ratio: st.pct / 100 });
+  });
+  rows.sort((a, b) => {
+    if (sort === "updated") return b.updated.localeCompare(a.updated);
+    if (sort === "unread") return a.ratio - b.ratio;
+    if (sort === "progress") return b.pct - a.pct;
+    return a.title.localeCompare(b.title, "fa");
+  });
+  document.getElementById("list").innerHTML = rows.map((g) => {
+    const unread = g.kind === "form" ? g.done === 0 : g.done === 0;
+    const status = g.kind === "external"
+      ? "آدرس جدا"
+      : (unread ? "نخوانده" : (g.kind === "form" ? (g.done + " برگه پر") : (g.done >= g.pages ? "تمام" : "نیمه‌کاره")));
+    const count = g.kind === "form"
+      ? "پر شده " + faNum(g.done) + " از " + faNum(g.page)
+      : "خوانده " + faNum(g.done) + " از " + faNum(g.pages) + " — " + faNum(g.pct) + "٪";
+    const pageBit = g.kind === "workshop" ? '<span class="pill">صفحه ' + faNum(g.page) + "</span>" : "";
+    return '<a class="card" href="' + g.href + '"><h2>' + g.title + '</h2><p class="meta">' + g.blurb + '</p><div class="row">' +
+      '<span class="pill ' + (unread && g.kind !== "external" ? "warn" : "ok") + '">' + status + "</span>" +
+      '<span class="pill">' + count + "</span>" +
+      pageBit +
+      (g.hasNotes ? '<span class="pill">یادداشت</span>' : "") +
+      "</div><div class=\"prog\"><i style=\"width:" + (g.kind === "external" ? 0 : g.pct) + '%"></i></div></a>';
+  }).join("");
+}
+
+document.getElementById("sort").onchange = paint;
+document.getElementById("btnExport").onclick = () => {
+  let out = "kargah-zendegi\n" + new Date().toISOString() + "\n\n";
+  GUIDES.forEach((g) => {
+    const st = readState(g);
+    out += g.title + " — " + st.done + (g.pages ? "/" + g.pages : "") + " — " + st.pct + "%\n";
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([out], { type: "text/plain;charset=utf-8" }));
+  a.download = "kargah-status.txt";
+  a.click();
+};
+function copy(text) {
+  navigator.clipboard.writeText(text).then(() => toast("کپی شد"), () => {
+    prompt("کپی کن", text);
+  });
+}
+document.getElementById("btnMake").onclick = async () => {
+  try {
+    await KargahSync.createRoom();
+    paintSync();
+    copy(KargahSync.roomLink());
+    toast("کد ساخته شد — لینک گوشی کپی شد");
+  } catch (e) {
+    toast("ساخت کد نشد؛ کمی بعد دوباره بزن");
+  }
+};
+document.getElementById("btnCopyRoom").onclick = () => {
+  const u = KargahSync.roomLink();
+  if (!u) { toast("اول کد بساز"); return; }
+  copy(u);
+};
+document.getElementById("btnCopyProg").onclick = () => copy(KargahSync.encodeLink());
+document.getElementById("btnPull").onclick = async () => {
+  const ok = await KargahSync.pull();
+  paint();
+  toast(ok ? "از ابر آمد" : "ابر در دسترس نبود");
+};
+document.getElementById("btnJoin").onclick = async () => {
+  try {
+    await KargahSync.joinRoom(document.getElementById("roomIn").value);
+    paintSync();
+    paint();
+    toast("وصل شد");
+  } catch (e) {
+    toast("این کد پیدا نشد");
+  }
+};
+
+function startUi() {
+  paintSync();
+  paint();
+}
+if (window.KargahSync && KargahSync.boot) {
+  KargahSync.boot().then(startUi).catch(startUi);
+} else {
+  startUi();
+}
 </script>
 </body>
 </html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>کارگاه واقعه — نقاب، دکان، ترس — نسخه عمیق</title>
+<style>
+:root{--bg:#0a0e14;--panel:#151b24;--line:#334155;--txt:#eef4fa;--gold:#7dd3c7;--hdr:148px;--toc:260px}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:17px/1.85 Vazirmatn,Tahoma,sans-serif}
+pre.src{font:13.5px/1.6 Consolas,monospace;direction:ltr!important;unicode-bidi:isolate!important;text-align:left!important;background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0;white-space:pre-wrap;word-break:break-word}
+pre.src:empty{display:none}
+.freeze{position:sticky;top:0;z-index:50;background:rgba(10,14,20,.98);border-bottom:1px solid var(--line);padding:10px 12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:600 14px Vazirmatn,Tahoma,sans-serif;background:#0d1117;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:38px;cursor:pointer}
+.layout{display:grid;grid-template-columns:1fr var(--toc)}
+.layout.toc-off{grid-template-columns:1fr}
+.layout.toc-off #toc{display:none}
+.layout.toc-off main{max-width:none;margin:0}
+#toc{position:sticky;top:var(--hdr);height:calc(100vh - var(--hdr));overflow:auto;border-right:1px solid var(--line);padding:8px;background:#0f141c;font-size:12px;line-height:1.5}
+#toc a{display:block;color:#9bb0c3;text-decoration:none;padding:5px 8px;border-radius:8px}
+#toc a.here{background:#243040;color:var(--txt)}
+#toc a.done{color:#86e0a3}
+main{padding:14px clamp(12px,3vw,24px) 100px;max-width:920px;min-width:0;width:100%}
+h2{color:var(--gold);font-size:19px;margin:0 0 10px}
+.page{display:none}.page.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.do{color:var(--gold);font-weight:800}
+.steps{margin:10px 0;padding:0;list-style:none;counter-reset:s}
+.steps:empty{display:none}
+.steps li{margin:8px 0;padding:10px 12px;background:#0d1117;border:1px solid var(--line);border-radius:10px;counter-increment:s;direction:rtl;text-align:right;unicode-bidi:plaintext}
+.steps li::before{content:counter(s);display:inline-block;min-width:1.8rem;margin-left:8px;color:var(--gold);font-weight:800}
+.widgets{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px;font-size:13px}
+.wid{background:#0d1117;border:1px solid var(--line);border-radius:10px;padding:8px}
+.wid b{display:block;font-size:11px;color:#9bb0c3;margin-bottom:4px}
+.wid .val{font-weight:800;color:var(--gold);font-size:13px}
+.prog{height:5px;background:#1a222d;border-radius:99px;margin-top:6px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--gold);width:0}
+.pager{position:fixed;bottom:0;left:0;right:0;background:rgba(10,14,20,.97);border-top:1px solid var(--line);display:flex;gap:10px;justify-content:center;padding:10px;z-index:40}
+.pager .num{direction:ltr;color:var(--gold);font-weight:800}
+.note-lbl{display:block;margin-top:12px;font-size:14px;color:#9bb0c3}
+.notebox{width:100%;margin-top:6px;background:#0d1117;border:1px solid var(--line);border-radius:10px;color:var(--txt);font:15px Vazirmatn,Tahoma;padding:8px;resize:vertical}
+.hint{font-size:13px;color:#9bb0c3;margin:4px 0 0}
+.hint a{color:var(--gold)}
+#searchBox{width:100%;margin-top:4px;background:#0a0e14;border:1px solid var(--line);border-radius:8px;color:var(--txt);font:14px Vazirmatn,Tahoma;padding:6px}
+@media(max-width:960px){.layout{grid-template-columns:1fr}#toc{position:relative;height:auto;max-height:35vh}.widgets{grid-template-columns:1fr 1fr}}
+@media print{.freeze,.pager,#toc{display:none!important}.layout{display:block}.page{display:block!important;break-after:page}}
+</style>
+</head>
+<body>
+<header class="freeze">
+<div class="row">
+<button type="button" id="btnMenu">فهرست</button>
+<button type="button" id="btnResume">ادامه</button>
+<button type="button" id="btnExport">دانلود گزارش</button>
+<button type="button" id="btnClear">پاک کردن پیشرفت</button>
+<button type="button" onclick="window.print()">چاپ</button>
+<span id="pageChip">صفحه ۱</span>
+</div>
+<div class="widgets">
+<div class="wid"><b>تیک</b><div class="val" id="wDone">۰</div></div>
+<div class="wid"><b>ناتمام</b><button type="button" id="btnTodo">پرش</button></div>
+<div class="wid" style="grid-column:span 2"><b>جستجو</b><input id="searchBox" type="search" placeholder="مثلاً دکان، نقاب، پیک، باشگاه، مادر"/></div>
+<div class="wid"><b>پیشرفت</b><div class="val" id="wPct">۰٪</div><div class="prog"><i id="progBar"></i></div></div>
+</div>
+<p class="hint">نسخهٔ عمیق چندلایه. فرض کارگاهی است، نه حکم. سطرهایی که با بدنت نمی‌خوانند را خط بزن.</p>
+<p class="hint"><a href="index.html">فهرست کارگاه‌ها</a></p>
+</header>
+<div class="layout" id="layout">
+<main id="main"></main>
+<nav id="toc"></nav>
+</div>
+<div class="pager">
+<button type="button" id="btnPrev">قبل</button>
+<span class="num" id="pagerNum"></span>
+<button type="button" id="btnNext">بعد</button>
+</div>
+<script src="workshop-sync.js"></script>
+<script src="workshop-readkit.js"></script>
+<script src="workshop-vaghee-pages.js"></script>
+<script>
+WorkshopReadkit({
+  storageKey: "nama-vaghee-form-v2",
+  exportTitle: "vaghee mask shop fear workshop",
+  exportFile: "vaghee-workshop-report",
+  pages: window.VAGHEE_PAGES
+});
+</script>
+</body>
+</html>

@@ -63,7 +63,7 @@ h2{color:var(--gold);font-size:19px;margin:0 0 10px}
 <div class="wid"><b>تیک</b><div class="val" id="wDone">۰</div></div>
 <div class="wid"><b>ناتمام</b><button type="button" id="btnTodo">پرش</button></div>
 <div class="wid" style="grid-column:span 2"><b>جستجو</b><input id="searchBox" type="search" placeholder="مثلاً پروتئین، فستینگ، واکسن، فانکشنال"/></div>
-<div class="wid"><b>پیشرفت</b><div class="prog"><i id="progBar"></i></div></div>
+<div class="wid"><b>پیشرفت</b><div class="val" id="wPct">۰٪</div><div class="prog"><i id="progBar"></i></div></div>
 </div>
 <p class="hint">صفحه‌به‌صفحه بخوان. عکس تمام‌قد است؛ رویش بزن تا دانلود شود. باکس سیاه مسیر یا اسم لاتین است. آموزشی است نه نسخه پزشکی.</p>
 <p class="hint"><a href="index.html" style="color:var(--gold)">فهرست راهنماها</a></p>
@@ -77,6 +77,7 @@ h2{color:var(--gold);font-size:19px;margin:0 0 10px}
 <span class="num" id="pagerNum"></span>
 <button type="button" id="btnNext">بعد</button>
 </div>
+<script src="workshop-sync.js"></script>
 <script src="workshop-readkit.js"></script>
 <script src="workshop-personal-os-pages.js"></script>
 <script>

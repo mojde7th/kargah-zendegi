@@ -17,9 +17,11 @@ window.WorkshopReadkit = function (cfg) {
     return s;
   }
   function save(s) {
+    s.t = Date.now();
     try {
       localStorage.setItem(LS, JSON.stringify(s));
     } catch (e) {}
+    if (window.KargahSync && KargahSync.pushSoon) KargahSync.pushSoon();
   }
 
   function faNum(n) {
@@ -55,7 +57,12 @@ window.WorkshopReadkit = function (cfg) {
       "main{min-width:0;width:100%}\n" +
       ".layout.toc-off{grid-template-columns:1fr!important}\n" +
       ".layout.toc-off #toc{display:none!important}\n" +
-      ".layout.toc-off main{max-width:none!important;margin:0!important}\n";
+      ".layout.toc-off main{max-width:none!important;margin:0!important}\n" +
+      ".flag{display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border:1px solid #334155;border-radius:12px;background:#0d1117;font-weight:800;cursor:pointer}\n" +
+      ".flag input{width:22px;height:22px;accent-color:#86e0a3}\n" +
+      ".flag:has(input:checked){border-color:#86e0a3;background:#14352e;color:#86e0a3}\n" +
+      "#toc a.done{color:#86e0a3}\n" +
+      "#toc a.done::before{content:'✓ ';color:#86e0a3}\n";
     document.head.appendChild(style);
   }
 
@@ -167,10 +174,13 @@ window.WorkshopReadkit = function (cfg) {
         id +
         '" ' +
         (s.done[id] ? "checked" : "") +
-        "> این گام را انجام دادم</label>";
+        "> خواندم — این صفحه سبز شود</label>";
     });
     const bar = $("#progBar");
-    if (bar) bar.style.width = Math.round((n / N) * 100) + "%";
+    const pct = N ? Math.round((n / N) * 100) : 0;
+    if (bar) bar.style.width = pct + "%";
+    const wPct = $("#wPct");
+    if (wPct) wPct.textContent = faNum(pct) + "٪";
     paintNotes();
   }
 
@@ -243,8 +253,21 @@ window.WorkshopReadkit = function (cfg) {
   const br = $("#btnResume");
   const be = $("#btnExport");
   const bc = $("#btnClear");
+  function markCurrentRead() {
+    const s = st();
+    const id = "p" + s.page;
+    if (!s.done[id]) {
+      s.done[id] = true;
+      save(s);
+    }
+  }
   if (bp) bp.onclick = () => go(st().page - 1);
-  if (bn) bn.onclick = () => go(st().page + 1);
+  if (bn)
+    bn.onclick = () => {
+      markCurrentRead();
+      paint();
+      go(st().page + 1);
+    };
   if (bm) bm.onclick = () => $("#layout").classList.toggle("toc-off");
   if (br) br.onclick = () => go(st().page);
   if (be) be.onclick = downloadExport;
@@ -287,6 +310,13 @@ window.WorkshopReadkit = function (cfg) {
       });
     });
 
-  paint();
-  go(st().page);
+  function start() {
+    paint();
+    go(st().page);
+  }
+  if (window.KargahSync && KargahSync.boot) {
+    KargahSync.boot().then(start).catch(start);
+  } else {
+    start();
+  }
 };

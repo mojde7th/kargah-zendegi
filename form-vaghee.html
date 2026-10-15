@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>فرم خالی واقعه</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --paper:#f6efe2;
+  --ink:#2a241c;
+  --line:#c9b89a;
+  --gold:#7a5c2e;
+  --screen:#1b1712;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--screen);color:var(--paper);font:16px/1.85 Vazirmatn,Tahoma,sans-serif}
+.toolbar{position:sticky;top:0;z-index:20;background:#14110d;border-bottom:1px solid #3a3328;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar a,.toolbar button{font:700 14px Vazirmatn,sans-serif;background:#2a241c;color:var(--paper);border:1px solid #5a4e3c;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer;text-decoration:none}
+.wrap{max-width:880px;margin:0 auto;padding:18px 14px 80px}
+h1{font-size:1.25rem;margin:0 0 8px;color:#e8d7b0}
+.sub,.hint{color:#cbbda6;margin:0 0 16px}
+.sheet{
+  background:var(--paper);
+  color:var(--ink);
+  border:1px solid #d8c7a8;
+  border-radius:6px;
+  padding:22px 20px 28px;
+  margin:0 0 28px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+.sheet h2{margin:0 0 6px;font-size:1.15rem;color:var(--gold);border-bottom:2px solid var(--gold);padding-bottom:6px}
+.headrow{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.headrow input{flex:1}
+label{display:block;font-weight:800;font-size:.82rem;color:var(--gold);margin:10px 0 4px}
+input,textarea{
+  width:100%;
+  border:0;
+  border-bottom:1px dashed var(--line);
+  background:transparent;
+  color:var(--ink);
+  font:16px/1.8 Vazirmatn,Tahoma,sans-serif;
+  padding:6px 2px;
+  resize:vertical;
+}
+textarea{border:1px dashed var(--line);border-radius:4px;padding:8px;background:rgba(255,255,255,.35);min-height:72px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.del{background:transparent;border:1px solid var(--line);color:#7a3b2e;border-radius:8px;padding:6px 10px;font:700 13px Vazirmatn,sans-serif;cursor:pointer}
+.voice{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.voice button{font:700 13px Vazirmatn,sans-serif;background:#2a241c;color:#f6efe2;border:1px solid #5a4e3c;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer}
+.voice button.on{background:#5a2a24;border-color:#c45c4a}
+.mic{font-size:.85rem;color:#7a5c2e;margin:0 0 8px;min-height:1.4em}
+.paste{min-height:90px}
+#wk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#14352e;color:#86e0a3;border:1px solid #86e0a3;padding:10px 18px;border-radius:12px;z-index:80;font:600 15px Vazirmatn,sans-serif;display:none;max-width:90%}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+@media print{
+  body{background:#fff}
+  .toolbar,.hint,.voice,.mic,#wk-toast{display:none!important}
+  .wrap{max-width:none;padding:0}
+  .sheet{box-shadow:none;border:1px solid #b9a57e;border-radius:0;break-after:page;margin:0}
+  a{display:none}
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <a href="index.html">فهرست</a>
+  <a href="workshop-vaghee-form.html">کارگاه ستون‌ها</a>
+  <button type="button" id="btnAdd">واقعهٔ خالی</button>
+  <button type="button" id="btnSave">ذخیره</button>
+  <button type="button" id="btnPrint">چاپ یا پی‌دی‌اف</button>
+  <button type="button" id="btnTxt">خروجی متن</button>
+</div>
+<div class="wrap">
+  <h1>فرم خالی واقعه</h1>
+  <p class="sub">برای تو و همکلاسی. تایپ کن یا بگو. رونوشت ساخته می‌شود. بعد می‌توانی پیشنهاد ستون‌ها را بگیری یا متن را برای هوش مصنوعی کپی کنی.</p>
+  <p class="hint">خانه‌ها: واقعه، نگاه، نقاب و نقش، الگو، دکان، ترس و مبادا، درون، سناریوها، جملهٔ ته. ذخیره در همین مرورگر است؛ با کد همگام فهرست به گوشی هم می‌رود.</p>
+  <div id="list"></div>
+</div>
+<script src="workshop-sync.js"></script>
+<script>
+const LS = "form-vaghee-class-v1";
+const FIELDS = [
+  ["vaghee", "واقعه"],
+  ["negah", "نگاه"],
+  ["naqab", "نقاب و نقش"],
+  ["olgo", "الگوی رفتاری"],
+  ["dokon", "دکان"],
+  ["tars", "ترس و مبادا"],
+  ["darun", "تجربهٔ درونی"],
+  ["sen", "سناریوها"],
+  ["jumle", "جملهٔ آزمایشی ته"]
+];
+function faNum(n) {
+  return String(n).replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+}
+function toast(msg) {
+  let el = document.getElementById("wk-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "wk-toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = "block";
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display = "none"; }, 2400);
+}
+function blank() {
+  const o = { title: "", goft: "" };
+  FIELDS.forEach(([k]) => { o[k] = ""; });
+  return o;
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS));
+    if (s && Array.isArray(s.items) && s.items.length) return s.items;
+  } catch (e) {}
+  return [blank()];
+}
+function save(list) {
+  localStorage.setItem(LS, JSON.stringify({ items: list, t: Date.now() }));
+  if (window.KargahSync && KargahSync.pushSoon) KargahSync.pushSoon();
+}
+function el(tag, attrs, html) {
+  const n = document.createElement(tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => n.setAttribute(k, v));
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+let items = [];
+let rec = null;
+let recIndex = -1;
+let recFinal = "";
+const list = document.getElementById("list");
+
+function paint() {
+  list.innerHTML = "";
+  items.forEach((it, i) => {
+    const sheet = el("article", { class: "sheet", "data-i": String(i) });
+    const head = el("div", { class: "headrow" });
+    const t = el("input", { "data-k": "title", "data-i": String(i), placeholder: "عنوان واقعه" });
+    t.value = it.title || "";
+    const del = el("button", { type: "button", class: "del", "data-del": String(i) }, "حذف");
+    head.appendChild(t);
+    head.appendChild(del);
+    sheet.appendChild(el("h2", {}, "برگهٔ " + faNum(i + 1)));
+    sheet.appendChild(head);
+
+    const voice = el("div", { class: "voice" });
+    voice.appendChild(el("button", { type: "button", "data-speak": String(i) }, "بگو — رونوشت"));
+    voice.appendChild(el("button", { type: "button", "data-stop": String(i) }, "توقف گفتار"));
+    voice.appendChild(el("button", { type: "button", "data-rec": String(i) }, "ضبط صدا"));
+    voice.appendChild(el("button", { type: "button", "data-help": String(i) }, "پیشنهاد ستون‌ها"));
+    voice.appendChild(el("button", { type: "button", "data-copy": String(i) }, "کپی برای هوش مصنوعی"));
+    sheet.appendChild(voice);
+    sheet.appendChild(el("p", { class: "mic", "data-mic": String(i) }, it.goft ? "رونوشت ذخیره شده" : "می‌توانی بگویی یا بنویسی"));
+
+    const grid = el("div", { class: "grid" });
+    FIELDS.forEach(([k, lab], idx) => {
+      const box = document.createElement("div");
+      if (idx === 0 || idx >= 7) box.style.gridColumn = "1 / -1";
+      box.appendChild(el("label", {}, lab));
+      const ta = document.createElement("textarea");
+      ta.dataset.k = k;
+      ta.dataset.i = String(i);
+      ta.rows = k === "vaghee" || k === "sen" ? 4 : 3;
+      ta.value = it[k] || "";
+      box.appendChild(ta);
+      grid.appendChild(box);
+    });
+    const extra = document.createElement("div");
+    extra.style.gridColumn = "1 / -1";
+    extra.appendChild(el("label", {}, "پاسخ هوش مصنوعی را اینجا بچسبان"));
+    extra.appendChild(el("textarea", { class: "paste", "data-paste": String(i), rows: "3", placeholder: "اگر پیشنهاد ابری کار نکرد، پاسخ را اینجا بگذار و بیرون بزن" }));
+    grid.appendChild(extra);
+    sheet.appendChild(grid);
+    list.appendChild(sheet);
+  });
+}
+function readDom() {
+  items.forEach((_, i) => {
+    const root = list.querySelector('.sheet[data-i="' + i + '"]');
+    if (!root) return;
+    root.querySelectorAll("[data-k]").forEach((n) => {
+      items[i][n.dataset.k] = n.value;
+    });
+  });
+}
+function aiPrompt(it) {
+  return [
+    "این یک واقعه است. حکم نده. فرض کارگاهی بده. ستون‌ها را با همین عنوان‌ها پر کن:",
+    "واقعه (فقط دوربین)",
+    "نگاه",
+    "نقاب و نقش",
+    "الگوی رفتاری",
+    "دکان",
+    "ترس و مبادا",
+    "تجربهٔ درونی",
+    "سناریوها",
+    "جملهٔ آزمایشی ته",
+    "",
+    "عنوان: " + (it.title || ""),
+    "متن یا رونوشت:",
+    it.vaghee || it.goft || ""
+  ].join("\n");
+}
+function applyFields(i, fields) {
+  if (!fields) return;
+  ["title", "vaghee", "negah", "naqab", "olgo", "dokon", "tars", "darun", "sen", "jumle"].forEach((k) => {
+    if (fields[k] && !String(items[i][k] || "").trim()) items[i][k] = String(fields[k]);
+  });
+}
+function parsePasted(text) {
+  const out = {};
+  const labels = [
+    ["واقعه", "vaghee"],
+    ["نگاه", "negah"],
+    ["نقاب و نقش", "naqab"],
+    ["نقاب", "naqab"],
+    ["الگوی رفتاری", "olgo"],
+    ["الگو", "olgo"],
+    ["دکان", "dokon"],
+    ["ترس و مبادا", "tars"],
+    ["ترس", "tars"],
+    ["تجربهٔ درونی", "darun"],
+    ["درون", "darun"],
+    ["سناریوها", "sen"],
+    ["جملهٔ آزمایشی ته", "jumle"],
+    ["جمله", "jumle"],
+    ["عنوان", "title"]
+  ];
+  const lines = String(text || "").split(/\n+/);
+  let cur = null;
+  lines.forEach((ln) => {
+    const t = ln.trim();
+    let hit = null;
+    labels.forEach(([lab, key]) => {
+      if (t === lab || t.indexOf(lab + ":") === 0 || t.indexOf(lab + "：") === 0) hit = key;
+    });
+    if (hit) {
+      cur = hit;
+      const rest = t.replace(/^[^:：]+[:：]\s*/, "");
+      if (rest && rest !== t) out[cur] = (out[cur] ? out[cur] + "\n" : "") + rest;
+      return;
+    }
+    if (cur) out[cur] = (out[cur] ? out[cur] + "\n" : "") + t;
+  });
+  return out;
+}
+function Speech() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition;
+}
+function setMic(i, msg) {
+  const eln = list.querySelector('[data-mic="' + i + '"]');
+  if (eln) eln.textContent = msg;
+}
+function stopSpeech() {
+  try { if (rec) rec.stop(); } catch (e) {}
+  rec = null;
+  recIndex = -1;
+}
+list.addEventListener("input", () => { readDom(); save(items); });
+list.addEventListener("click", async (e) => {
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    readDom();
+    items.splice(+del.dataset.del, 1);
+    if (!items.length) items.push(blank());
+    save(items);
+    paint();
+    return;
+  }
+  const speak = e.target.closest("[data-speak]");
+  if (speak) {
+    const Rec = Speech();
+    if (!Rec) { toast("گفتار روی این مرورگر نیست؛ کروم یا اج را باز کن"); return; }
+    stopSpeech();
+    recIndex = +speak.dataset.speak;
+    recFinal = items[recIndex].vaghee || "";
+    rec = new Rec();
+    rec.lang = "fa-IR";
+    rec.continuous = true;
+    rec.interimResults = true;
+    speak.classList.add("on");
+    rec.onresult = (ev) => {
+      let inter = "";
+      for (let n = ev.resultIndex; n < ev.results.length; n++) {
+        const tx = ev.results[n][0].transcript;
+        if (ev.results[n].isFinal) recFinal += (recFinal && !/\s$/.test(recFinal) ? " " : "") + tx;
+        else inter += tx;
+      }
+      items[recIndex].vaghee = (recFinal + (inter ? " " + inter : "")).trim();
+      items[recIndex].goft = recFinal;
+      const ta = list.querySelector('.sheet[data-i="' + recIndex + '"] textarea[data-k="vaghee"]');
+      if (ta) ta.value = items[recIndex].vaghee;
+      setMic(recIndex, "در حال شنیدن…");
+    };
+    rec.onend = () => {
+      speak.classList.remove("on");
+      if (items[recIndex]) {
+        items[recIndex].vaghee = recFinal.trim();
+        items[recIndex].goft = recFinal.trim();
+        save(items);
+        setMic(recIndex, recFinal ? "رونوشت ذخیره شد" : "چیزی شنیده نشد");
+      }
+      rec = null;
+    };
+    rec.onerror = () => {
+      setMic(recIndex, "گفتار قطع شد");
+      speak.classList.remove("on");
+    };
+    rec.start();
+    setMic(recIndex, "گوش می‌دهد — فارسی بگو");
+    toast("گوش می‌دهد");
+    return;
+  }
+  const stop = e.target.closest("[data-stop]");
+  if (stop) { stopSpeech(); toast("توقف"); return; }
+  const recb = e.target.closest("[data-rec]");
+  if (recb) {
+    const i = +recb.dataset.rec;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast("ضبط صدا روی این مرورگر نیست");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const chunks = [];
+      const mr = new MediaRecorder(stream);
+      mr.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); };
+      mr.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "vaghee-" + (i + 1) + ".webm";
+        a.click();
+        toast("فایل صدا دانلود شد");
+      };
+      mr.start();
+      recb.classList.add("on");
+      recb.textContent = "در حال ضبط — بزن تا تمام";
+      recb.onclick = (ev2) => {
+        ev2.stopPropagation();
+        mr.stop();
+        recb.classList.remove("on");
+        recb.textContent = "ضبط صدا";
+      };
+      toast("ضبط شروع شد");
+    } catch (err) {
+      toast("دسترسی میکروفن داده نشد");
+    }
+    return;
+  }
+  const copyb = e.target.closest("[data-copy]");
+  if (copyb) {
+    readDom();
+    const i = +copyb.dataset.copy;
+    const txt = aiPrompt(items[i]);
+    navigator.clipboard.writeText(txt).then(() => toast("متن برای هوش مصنوعی کپی شد"), () => prompt("کپی کن", txt));
+    return;
+  }
+  const helpb = e.target.closest("[data-help]");
+  if (helpb) {
+    readDom();
+    const i = +helpb.dataset.help;
+    const it = items[i];
+    if (!String(it.vaghee || it.goft || "").trim()) {
+      toast("اول واقعه را بگو یا بنویس");
+      return;
+    }
+    helpb.disabled = true;
+    setMic(i, "پیشنهاد ستون‌ها…");
+    try {
+      const r = await KargahSync.helpFill({
+        title: it.title || "",
+        vaghee: it.vaghee || it.goft || "",
+        transcript: it.goft || "",
+        negah: it.negah || "",
+        naqab: it.naqab || "",
+        olgo: it.olgo || "",
+        dokon: it.dokon || "",
+        tars: it.tars || "",
+        darun: it.darun || "",
+        sen: it.sen || "",
+        jumle: it.jumle || ""
+      });
+      applyFields(i, r.fields || r);
+      save(items);
+      paint();
+      toast("ستون‌ها پیشنهاد شد — هر سطر را که نمی‌خواند خط بزن");
+    } catch (err) {
+      const txt = aiPrompt(it);
+      navigator.clipboard.writeText(txt).then(() => toast("ابر کمکی نشد؛ متن کپی شد تا خودت به هوش مصنوعی بدهی"), () => prompt("کپی کن", txt));
+    }
+    helpb.disabled = false;
+  }
+});
+list.addEventListener("focusout", (e) => {
+  const p = e.target.closest("[data-paste]");
+  if (!p) return;
+  const txt = p.value.trim();
+  if (!txt) return;
+  const i = +p.dataset.paste;
+  applyFields(i, parsePasted(txt));
+  p.value = "";
+  save(items);
+  paint();
+  toast("از متن چسبانده‌شده پر شد");
+});
+document.getElementById("btnAdd").onclick = () => {
+  readDom();
+  items.push(blank());
+  save(items);
+  paint();
+  window.scrollTo(0, document.body.scrollHeight);
+};
+document.getElementById("btnSave").onclick = () => { readDom(); save(items); toast("ذخیره شد"); };
+document.getElementById("btnPrint").onclick = () => { readDom(); save(items); window.print(); };
+document.getElementById("btnTxt").onclick = () => {
+  readDom();
+  save(items);
+  let out = "فرم واقعه\n" + new Date().toLocaleString("fa-IR") + "\n\n";
+  items.forEach((it, i) => {
+    out += "—— " + (it.title || ("واقعه " + (i + 1))) + " ——\n";
+    if (it.goft) out += "رونوشت:\n" + it.goft + "\n\n";
+    FIELDS.forEach(([k, lab]) => { out += lab + ":\n" + (it[k] || "—") + "\n\n"; });
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([out], { type: "text/plain;charset=utf-8" }));
+  a.download = "form-vaghee.txt";
+  a.click();
+};
+
+async function start() {
+  try { if (window.KargahSync) await KargahSync.boot(); } catch (e) {}
+  items = load();
+  paint();
+}
+start();
+</script>
+</body>
+</html>
