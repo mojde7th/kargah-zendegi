@@ -7,6 +7,7 @@
     "kargah-zendegi-v1",
     "nama-neshast-negah-v1",
     "nama-vaghee-form-v2",
+    "personal-os-recomp-v1",
     "personal-os-recomp-v2",
     "personal-os-kamel-v2",
     "form-neshast-v1",

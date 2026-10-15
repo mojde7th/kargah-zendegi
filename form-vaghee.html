@@ -150,9 +150,8 @@ function paint() {
     sheet.appendChild(head);
 
     const voice = el("div", { class: "voice" });
-    voice.appendChild(el("button", { type: "button", "data-speak": String(i) }, "بگو — رونوشت"));
-    voice.appendChild(el("button", { type: "button", "data-stop": String(i) }, "توقف گفتار"));
-    voice.appendChild(el("button", { type: "button", "data-rec": String(i) }, "ضبط صدا"));
+    voice.appendChild(el("button", { type: "button", "data-speak": String(i) }, "بگو — تا وقتی دوباره بزنی"));
+    voice.appendChild(el("button", { type: "button", "data-stop": String(i) }, "تمام — بریز تو واقعه"));
     voice.appendChild(el("button", { type: "button", "data-help": String(i) }, "پیشنهاد ستون‌ها"));
     voice.appendChild(el("button", { type: "button", "data-copy": String(i) }, "کپی برای هوش مصنوعی"));
     sheet.appendChild(voice);
@@ -219,8 +218,41 @@ function aiPrompt(it) {
 }
 function applyFields(i, fields) {
   if (!fields) return;
-  ["title", "vaghee", "negah", "naqab", "olgo", "dokon", "tars", "darun", "sen", "jumle"].forEach((k) => {
-    if (fields[k] && !String(items[i][k] || "").trim()) items[i][k] = String(fields[k]);
+  const map = {
+    title: "title",
+    vaghee: "vaghee",
+    negah: "negah",
+    naqab: "naqab",
+    olgo: "olgo",
+    dokon: "dokon",
+    tars: "tars",
+    darun: "darun",
+    sen: "sen",
+    jumle: "jumle",
+    "عنوان": "title",
+    "واقعه": "vaghee",
+    "نگاه": "negah",
+    "نقاب": "naqab",
+    "نقاب و نقش": "naqab",
+    "الگو": "olgo",
+    "الگوی رفتاری": "olgo",
+    "دکان": "dokon",
+    "ترس": "tars",
+    "ترس و مبادا": "tars",
+    "درون": "darun",
+    "تجربه درونی": "darun",
+    "تجربهٔ درونی": "darun",
+    "سناریوها": "sen",
+    "جمله": "jumle",
+    "جملهٔ آزمایشی ته": "jumle"
+  };
+  Object.keys(fields).forEach((k) => {
+    const dest = map[k] || (map[String(k).trim()] || "");
+    if (!dest) return;
+    const val = String(fields[k] || "").trim();
+    if (!val) return;
+    if (dest === "vaghee") putVaghee(i, val, true);
+    else if (!String(items[i][dest] || "").trim()) items[i][dest] = val;
   });
 }
 function parsePasted(text) {
@@ -269,14 +301,29 @@ function setMic(i, msg) {
   if (eln) eln.textContent = msg;
 }
 let listenOn = false;
-function stopSpeech() {
+let audioRec = null;
+let audioStream = null;
+let audioChunks = [];
+let sttTimer = 0;
+function stopStt() {
   listenOn = false;
+  clearTimeout(sttTimer);
   try { if (rec) rec.stop(); } catch (e) {}
   rec = null;
-  recIndex = -1;
 }
-function putVaghee(i, text) {
-  const t = String(text || "").trim();
+function stopSpeech() {
+  stopStt();
+  try { if (audioRec && audioRec.state !== "inactive") audioRec.stop(); } catch (e) {}
+}
+function putVaghee(i, text, append) {
+  const add = String(text || "").trim();
+  if (!add) return;
+  const cur = String(items[i].vaghee || items[i].goft || "").trim();
+  let t = add;
+  if (append && cur) {
+    if (cur.indexOf(add) !== -1) t = cur;
+    else t = cur + (/\s$/.test(cur) ? "" : " ") + add;
+  }
   items[i].goft = t;
   items[i].vaghee = t;
   const root = list.querySelector('.sheet[data-i="' + i + '"]');
@@ -295,6 +342,128 @@ function blobB64(blob) {
     fr.onerror = reject;
     fr.readAsDataURL(blob);
   });
+}
+function speakBtn(i) {
+  return list.querySelector('[data-speak="' + i + '"]');
+}
+function startSttLoop(i) {
+  const Rec = Speech();
+  if (!Rec) return;
+  listenOn = true;
+  recIndex = i;
+  recFinal = items[i].goft || items[i].vaghee || "";
+  function loop() {
+    if (!listenOn || recIndex !== i) return;
+    try { if (rec) rec.stop(); } catch (e) {}
+    rec = new Rec();
+    rec.lang = "fa-IR";
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = (ev) => {
+      let inter = "";
+      for (let n = ev.resultIndex; n < ev.results.length; n++) {
+        const tx = ev.results[n][0].transcript;
+        if (ev.results[n].isFinal) recFinal += (recFinal && !/\s$/.test(recFinal) ? " " : "") + tx;
+        else inter += tx;
+      }
+      const shown = (recFinal + (inter ? " " + inter : "")).trim();
+      if (shown) putVaghee(i, shown);
+      setMic(i, "دارم می‌شنوم — قطع نمی‌شود تا «تمام» بزنی");
+    };
+    rec.onerror = (ev) => {
+      const err = ev && ev.error;
+      if (err === "no-speech" || err === "aborted" || err === "network") return;
+    };
+    rec.onend = () => {
+      rec = null;
+      if (listenOn && recIndex === i) sttTimer = setTimeout(loop, 180);
+    };
+    try {
+      rec.start();
+    } catch (e) {
+      sttTimer = setTimeout(loop, 400);
+    }
+  }
+  loop();
+}
+async function startTalk(i, btn) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    startSttLoop(i);
+    toast("فقط گفتار زنده — کروم بهتر است");
+    return;
+  }
+  try {
+    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    toast("دسترسی میکروفن داده نشد");
+    return;
+  }
+  recIndex = i;
+  audioChunks = [];
+  const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+    ? "audio/webm;codecs=opus"
+    : (MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "");
+  audioRec = mime ? new MediaRecorder(audioStream, { mimeType: mime }) : new MediaRecorder(audioStream);
+  audioRec.ondataavailable = (ev) => { if (ev.data && ev.data.size) audioChunks.push(ev.data); };
+  audioRec.onstop = async () => {
+    if (audioStream) audioStream.getTracks().forEach((t) => t.stop());
+    audioStream = null;
+    const blob = new Blob(audioChunks, { type: audioRec.mimeType || "audio/webm" });
+    audioRec = null;
+    const b = speakBtn(i);
+    if (b) {
+      b.classList.remove("on");
+      b.textContent = "بگو — تا وقتی دوباره بزنی";
+    }
+    if (!blob.size) {
+      if (recFinal) putVaghee(i, recFinal, true);
+      setMic(i, recFinal ? "متن رفت توی واقعه" : "چیزی ضبط نشد");
+      return;
+    }
+    setMic(i, "دارم صدا را به متن واقعه تبدیل می‌کنم…");
+    try {
+      const r = await KargahSync.transcribe(await blobB64(blob), blob.type);
+      const tx = (r && r.text) || "";
+      if (tx) {
+        putVaghee(i, tx, true);
+        setMic(i, "رونوشت رفت توی ستون واقعه");
+        toast("متن آمد توی واقعه");
+      } else if (recFinal) {
+        putVaghee(i, recFinal, true);
+        setMic(i, "متن زنده رفت توی واقعه");
+      } else {
+        setMic(i, "متن ساخته نشد — در جعبهٔ رونوشت بنویس");
+        toast("در جعبهٔ رونوشت بنویس");
+      }
+    } catch (err) {
+      if (recFinal) putVaghee(i, recFinal, true);
+      setMic(i, recFinal ? "متن زنده رفت توی واقعه" : "تبدیل نشد — بنویس");
+    }
+  };
+  audioRec.start(1000);
+  startSttLoop(i);
+  if (btn) {
+    btn.classList.add("on");
+    btn.textContent = "دارم می‌شنوم — دوباره بزن تا تمام شود";
+  }
+  setMic(i, "گوش می‌دهد تا خودت تمام کنی");
+  toast("بگو. قطع نمی‌شود تا تمام را بزنی");
+}
+function finishTalk(i) {
+  if (i == null) i = recIndex;
+  stopStt();
+  const b = speakBtn(i);
+  if (b) {
+    b.classList.remove("on");
+    b.textContent = "بگو — تا وقتی دوباره بزنی";
+  }
+  if (audioRec && audioRec.state !== "inactive") {
+    try { audioRec.stop(); } catch (e) {}
+    toast("تمام — تبدیل به متن");
+    return;
+  }
+  if (recFinal) putVaghee(i, recFinal, true);
+  setMic(i, recFinal ? "متن رفت توی ستون واقعه" : "متنی نبود");
 }
 list.addEventListener("input", (e) => {
   readDom();
@@ -324,107 +493,17 @@ list.addEventListener("click", async (e) => {
   }
   const speak = e.target.closest("[data-speak]");
   if (speak) {
-    const Rec = Speech();
-    if (!Rec) { toast("گفتار روی این مرورگر نیست؛ کروم یا اج را باز کن"); return; }
-    stopSpeech();
-    recIndex = +speak.dataset.speak;
-    recFinal = items[recIndex].goft || items[recIndex].vaghee || "";
-    listenOn = true;
-    rec = new Rec();
-    rec.lang = "fa-IR";
-    rec.continuous = true;
-    rec.interimResults = true;
-    speak.classList.add("on");
-    rec.onresult = (ev) => {
-      let inter = "";
-      for (let n = ev.resultIndex; n < ev.results.length; n++) {
-        const tx = ev.results[n][0].transcript;
-        if (ev.results[n].isFinal) recFinal += (recFinal && !/\s$/.test(recFinal) ? " " : "") + tx;
-        else inter += tx;
-      }
-      const shown = (recFinal + (inter ? " " + inter : "")).trim();
-      items[recIndex].vaghee = shown;
-      items[recIndex].goft = recFinal;
-      const root = list.querySelector('.sheet[data-i="' + recIndex + '"]');
-      if (root) {
-        const v = root.querySelector('textarea[data-k="vaghee"]');
-        const g = root.querySelector('textarea[data-k="goft"]');
-        if (v) v.value = shown;
-        if (g) g.value = shown;
-      }
-      setMic(recIndex, "در حال شنیدن…");
-    };
-    rec.onend = () => {
-      if (listenOn) {
-        try { rec.start(); } catch (err) { listenOn = false; }
-        return;
-      }
-      speak.classList.remove("on");
-      if (items[recIndex]) {
-        putVaghee(recIndex, recFinal);
-        setMic(recIndex, recFinal ? "رونوشت رفت توی ستون واقعه" : "چیزی شنیده نشد؛ در جعبهٔ رونوشت بنویس");
-      }
-      rec = null;
-    };
-    rec.onerror = () => {
-      setMic(recIndex, "گفتار قطع شد — متن را در جعبهٔ رونوشت بنویس");
-      speak.classList.remove("on");
-      listenOn = false;
-    };
-    rec.start();
-    setMic(recIndex, "گوش می‌دهد — فارسی بگو");
-    toast("گوش می‌دهد");
+    const i = +speak.dataset.speak;
+    if (listenOn && recIndex === i) {
+      finishTalk(i);
+      return;
+    }
+    startTalk(i, speak);
     return;
   }
   const stop = e.target.closest("[data-stop]");
-  if (stop) { stopSpeech(); toast("توقف"); return; }
-  const recb = e.target.closest("[data-rec]");
-  if (recb) {
-    const i = +recb.dataset.rec;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      toast("ضبط صدا روی این مرورگر نیست");
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const chunks = [];
-      const mr = new MediaRecorder(stream);
-      mr.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); };
-      mr.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" });
-        recb.classList.remove("on");
-        recb.textContent = "ضبط صدا";
-        setMic(i, "در حال تبدیل صدا به متن…");
-        try {
-          const b64 = await blobB64(blob);
-          const r = await KargahSync.transcribe(b64, blob.type);
-          const tx = (r && r.text) || "";
-          if (tx) {
-            const prev = items[i].vaghee || items[i].goft || "";
-            putVaghee(i, (prev ? prev + " " : "") + tx);
-            setMic(i, "رونوشت رفت توی ستون واقعه");
-            toast("متن صدا آمد");
-          } else {
-            toast("متن ساخته نشد؛ در جعبهٔ رونوشت بنویس");
-            setMic(i, "متن ساخته نشد");
-          }
-        } catch (err) {
-          toast("تبدیل نشد؛ در جعبهٔ رونوشت بنویس");
-          setMic(i, "تبدیل نشد");
-        }
-      };
-      mr.start();
-      recb.classList.add("on");
-      recb.textContent = "در حال ضبط — بزن تا تمام";
-      recb.onclick = (ev2) => {
-        ev2.stopPropagation();
-        mr.stop();
-      };
-      toast("ضبط شروع شد");
-    } catch (err) {
-      toast("دسترسی میکروفن داده نشد");
-    }
+  if (stop) {
+    finishTalk(+stop.dataset.stop);
     return;
   }
   const copyb = e.target.closest("[data-copy]");
