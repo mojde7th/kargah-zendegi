@@ -448,11 +448,11 @@
   const HELP_SYS =
     "تو تسهیل‌گر کارگاه فرم واقعه هستی، نه پزشک. تشخیص بالینی نده. فرض کارگاهی مشخص بده. " +
     "ورودی رونوشت گفتار فارسی با غلط املایی است؛ معنی را حدس بزن. " +
-    "خروجی فقط یک شیء جیسون با همین کلیدهای لاتین: title, vaghee, negah, naqab, olgo, dokon, tars, darun, sen, jumle. " +
+    "خروجی فقط یک شیء جیسون با همین کلیدهای لاتین: title, vaghee, naqab, olgo, dokon, tars, darun, sen, jumle. " +
+    "ستون نگاه نساز. نگاه جدا نیست؛ نقش همان نقاب و نقش است. " +
     "اگر رونوشت خالی است یا صحنهٔ واقعی ندارد، همه کلیدها را رشته خالی بگذار. از خودت داستان نساز. " +
     "فقط وقتی واقعه یک صحنه دارد ستون‌ها را پر کن. " +
     "vaghee: فقط دوربین؛ غلط گفتار را درست کن؛ تفسیر نگذار. " +
-    "negah: چشم تو کجا بود، چشم او کجا بود. " +
     "naqab: کدام نسخه از تو جلو آمد تا زنده بماند. " +
     "olgo: محرک، کار بدن، کار دهان، بعد چه شد. " +
     "dokon: اگر آرام می‌ماندی چه کار سختی لازم بود. " +
@@ -500,8 +500,175 @@
       if (val == null) return;
       out[key] = typeof val === "string" ? val.trim() : String(val);
     });
-    if (!out.negah && !out.naqab && !out.olgo) throw new Error("thin");
+    if (!out.naqab && !out.olgo && !out.dokon && !out.tars && !out.darun) throw new Error("thin");
     return out;
+  }
+  const IR_KEY_LS = "kargah-ir-key";
+  const IR_CHAT = [
+    "https://api.avalai.ir/v1",
+    "https://api.avalapis.ir/v1",
+    "https://api.hooshgar.ir/v1",
+    "https://api.gapgpt.app/v1",
+    "https://api.metisai.ir/v1"
+  ];
+  function getIrKey() {
+    try {
+      return String(localStorage.getItem(IR_KEY_LS) || "").trim();
+    } catch (e) {
+      return "";
+    }
+  }
+  function setIrKey(k) {
+    try {
+      if (k) localStorage.setItem(IR_KEY_LS, String(k).trim());
+      else localStorage.removeItem(IR_KEY_LS);
+    } catch (e) {}
+  }
+  function pickText(j) {
+    if (!j) return "";
+    if (typeof j === "string") return j.trim();
+    const t =
+      j.text ||
+      j.result ||
+      j.transcript ||
+      (j.data && (j.data.text || j.data.result || j.data.transcript)) ||
+      (j.transcription && (j.transcription.text || j.transcription)) ||
+      (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) ||
+      j.generated_text ||
+      (Array.isArray(j) && j[0] && (j[0].generated_text || j[0].text)) ||
+      "";
+    return String(t || "").trim();
+  }
+  async function fetchWait(url, opt, ms) {
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 25000) : 0;
+    try {
+      const r = await fetch(url, Object.assign({}, opt, { signal: ctrl ? ctrl.signal : undefined }));
+      return r;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  async function transcribeIran(blob) {
+    if (!blob || !blob.size) throw new Error("empty audio");
+    const key = getIrKey();
+    if (key) {
+      for (let i = 0; i < IR_CHAT.length; i++) {
+        try {
+          const fd = new FormData();
+          fd.append("file", blob, "speech.wav");
+          fd.append("model", "whisper-1");
+          fd.append("language", "fa");
+          fd.append("prompt", "گفتار فارسی محاوره‌ای کارگاه واقعه.");
+          const r = await fetchWait(IR_CHAT[i] + "/audio/transcriptions", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + key },
+            body: fd
+          }, 28000);
+          if (!r.ok) continue;
+          const tx = pickText(await r.json());
+          if (tx) return { ok: true, text: tx, via: "iran" };
+        } catch (e) {}
+      }
+    }
+    try {
+      const fd = new FormData();
+      fd.append("file", blob, "speech.wav");
+      fd.append("audio", blob, "speech.wav");
+      fd.append("language", "fa");
+      const r = await fetchWait("https://api.ivira.ai/partai/avanegar", {
+        method: "POST",
+        body: fd
+      }, 28000);
+      if (r.ok) {
+        const tx = pickText(await r.json());
+        if (tx) return { ok: true, text: tx, via: "ivira" };
+      }
+    } catch (e) {}
+    try {
+      const r = await fetchWait(
+        "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
+        {
+          method: "POST",
+          headers: { Accept: "application/json", "Content-Type": "audio/wav" },
+          body: blob
+        },
+        40000
+      );
+      if (r.ok) {
+        const tx = pickText(await r.json());
+        if (tx) return { ok: true, text: tx, via: "hf" };
+      }
+    } catch (e) {}
+    throw new Error("iran stt");
+  }
+  async function helpIran(body) {
+    const user =
+      "عنوان: " +
+      (body.title || "") +
+      "\nرونوشت خام گفتار:\n" +
+      (body.vaghee || body.transcript || "") +
+      "\nهر ستون را پر کن. خروجی فقط جیسون. ستون نگاه نساز.";
+    const key = getIrKey();
+    const payload = {
+      model: "gpt-4o-mini",
+      temperature: 0.2,
+      messages: [
+        { role: "system", content: HELP_SYS },
+        { role: "user", content: user }
+      ]
+    };
+    if (key) {
+      for (let i = 0; i < IR_CHAT.length; i++) {
+        try {
+          const r = await fetchWait(IR_CHAT[i] + "/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + key
+            },
+            body: JSON.stringify(payload)
+          }, 40000);
+          if (!r.ok) continue;
+          const tx = pickText(await r.json());
+          if (tx) return { ok: true, fields: parseHelpFields(tx) };
+        } catch (e) {}
+      }
+    }
+    try {
+      const r = await fetchWait("https://api.ivira.ai/cloudinno/chitChatBot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: HELP_SYS + "\n\n" + user,
+          text: user,
+          prompt: HELP_SYS + "\n\n" + user
+        })
+      }, 40000);
+      if (r.ok) {
+        const tx = pickText(await r.json());
+        if (tx) return { ok: true, fields: parseHelpFields(tx) };
+      }
+    } catch (e) {}
+    try {
+      const r = await fetchWait(
+        "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            inputs: HELP_SYS + "\n\n" + user,
+            parameters: { max_new_tokens: 700, temperature: 0.2, return_full_text: false }
+          })
+        },
+        40000
+      );
+      if (r.ok) {
+        const tx = pickText(await r.json());
+        if (tx) return { ok: true, fields: parseHelpFields(tx) };
+      }
+    } catch (e) {}
+    throw new Error("iran help");
   }
 
   async function helpOpen(body) {
@@ -541,12 +708,18 @@
 
   async function helpFill(body) {
     try {
+      return await helpIran(body);
+    } catch (e) {}
+    try {
       return await helpOpen(body);
     } catch (e) {}
     return api("/help", "POST", body);
   }
   async function transcribe(audio, mime) {
     if (audio && typeof audio.size === "number") {
+      try {
+        return await transcribeIran(audio);
+      } catch (e) {}
       return apiRaw("/transcribe", audio, mime || audio.type || "audio/wav");
     }
     return api("/transcribe", "POST", { audio: audio, mime: mime || "" });
@@ -583,6 +756,10 @@
     joinRoom: joinRoom,
     helpFill: helpFill,
     transcribe: transcribe,
+    transcribeIran: transcribeIran,
+    helpIran: helpIran,
+    getIrKey: getIrKey,
+    setIrKey: setIrKey,
     pickApi: pickApi,
     migrateAliases: migrateAliases
   };
