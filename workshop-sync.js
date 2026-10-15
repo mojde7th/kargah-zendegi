@@ -189,13 +189,20 @@
   }
 
   async function api(path, method, body) {
-    const r = await fetch(API + path, {
-      method: method,
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: body != null ? JSON.stringify(body) : undefined
-    });
-    if (!r.ok) throw new Error("api " + r.status);
-    return r.json();
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 20000) : 0;
+    try {
+      const r = await fetch(API + path, {
+        method: method,
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: body != null ? JSON.stringify(body) : undefined,
+        signal: ctrl ? ctrl.signal : undefined
+      });
+      if (!r.ok) throw new Error("api " + r.status);
+      return r.json();
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   let pushTimer = 0;

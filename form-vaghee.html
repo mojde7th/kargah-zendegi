@@ -75,11 +75,11 @@ textarea{border:1px dashed var(--line);border-radius:4px;padding:8px;background:
 </div>
 <div class="wrap">
   <h1>فرم خالی واقعه</h1>
-  <p class="sub hidable">رونوشت را همین‌جا بنویس یا بگو؛ مستقیم می‌رود توی ستون واقعه. پیشرفت روی ابر ذخیره می‌شود.</p>
+  <p class="sub hidable">در سافاری از دیکتهٔ خود گوشی استفاده می‌شود. کیبورد فارسی روشن باشد. متن همان موقع توی ستون واقعه می‌آید.</p>
   <p class="hint hidable">خانه‌ها: واقعه، نگاه، نقاب و نقش، الگو، دکان، ترس و مبادا، درون، سناریوها، جملهٔ ته.</p>
   <div id="list"></div>
 </div>
-<script src="workshop-sync.js?v=5"></script>
+<script src="workshop-sync.js?v=6"></script>
 <script>
 const LS = "form-vaghee-class-v1";
 const FIELDS = [
@@ -298,6 +298,7 @@ function setMic(i, msg) {
   if (eln) eln.textContent = msg;
 }
 let recording = false;
+let listenOn = false;
 let recCtx = null;
 let recProc = null;
 let recGain = null;
@@ -308,6 +309,15 @@ let recRate = 16000;
 let recClock = 0;
 let recStarted = 0;
 let recRms = 0;
+function isSafariApp() {
+  const ua = navigator.userAgent || "";
+  const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome|Chromium|Android/.test(ua);
+  return iOS || safari;
+}
+function Speech() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition;
+}
 function putVaghee(i, text, append) {
   const add = String(text || "").trim();
   if (!add) return;
@@ -375,8 +385,14 @@ function pcmToWav(chunks, sampleRate) {
   new Uint8Array(buf, 44).set(new Uint8Array(pcm.buffer));
   return new Blob([buf], { type: "audio/wav" });
 }
+function stopDictation() {
+  listenOn = false;
+  try { if (rec) rec.stop(); } catch (e) {}
+  rec = null;
+}
 function stopCapture() {
   clearInterval(recClock);
+  stopDictation();
   try { if (recProc) recProc.disconnect(); } catch (e) {}
   try { if (recSrc) recSrc.disconnect(); } catch (e) {}
   try { if (recGain) recGain.disconnect(); } catch (e) {}
@@ -389,98 +405,94 @@ function markBtn(i, on) {
   const b = speakBtn(i);
   if (!b) return;
   b.classList.toggle("on", !!on);
-  b.textContent = on ? "در حال ضبط — بزن تا تمام شود" : "بگو — تا وقتی دوباره بزنی";
+  b.textContent = on ? "در حال شنیدن — بزن تا تمام شود" : "بگو — تا وقتی دوباره بزنی";
 }
-async function startTalk(i, btn) {
-  if (recording) {
-    await finishTalk(recIndex);
-    if (recIndex === i) return;
-  }
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    toast("این مرورگر میکروفن ندارد — در جعبهٔ رونوشت بنویس");
-    return;
-  }
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 }
-    });
-  } catch (err) {
-    toast("دسترسی میکروفن داده نشد");
-    return;
-  }
-  const AC = window.AudioContext || window.webkitAudioContext;
-  recCtx = new AC();
-  if (recCtx.state === "suspended") await recCtx.resume();
-  recRate = recCtx.sampleRate || 44100;
-  recStream = stream;
-  recSrc = recCtx.createMediaStreamSource(stream);
-  recProc = recCtx.createScriptProcessor(4096, 1, 1);
-  recGain = recCtx.createGain();
-  recGain.gain.value = 0;
-  recPcm = [];
-  recRms = 0;
-  recProc.onaudioprocess = (ev) => {
-    if (!recording) return;
-    const input = ev.inputBuffer.getChannelData(0);
-    recPcm.push(new Float32Array(input));
-    let sum = 0;
-    for (let n = 0; n < input.length; n++) sum += input[n] * input[n];
-    recRms = Math.sqrt(sum / input.length);
-  };
-  recSrc.connect(recProc);
-  recProc.connect(recGain);
-  recGain.connect(recCtx.destination);
-  recording = true;
+function startDictationLoop(i) {
+  const Rec = Speech();
+  if (!Rec) return false;
+  listenOn = true;
   recIndex = i;
+  recFinal = items[i].goft || items[i].vaghee || "";
+  function arm() {
+    if (!listenOn || recIndex !== i) return;
+    const r = new Rec();
+    r.lang = "fa-IR";
+    r.continuous = true;
+    r.interimResults = true;
+    r.maxAlternatives = 1;
+    r.onresult = function (ev) {
+      let inter = "";
+      for (let n = ev.resultIndex; n < ev.results.length; n++) {
+        const tx = ev.results[n][0].transcript;
+        if (ev.results[n].isFinal) recFinal += (recFinal && !/\s$/.test(recFinal) ? " " : "") + tx;
+        else inter += tx;
+      }
+      const shown = (recFinal + (inter ? " " + inter : "")).trim();
+      if (shown) putVaghee(i, shown);
+      setMic(i, "متن زنده می‌آید — تمام که شد همان دکمه را بزن");
+    };
+    r.onerror = function (ev) {
+      const err = ev && ev.error;
+      if (err === "not-allowed") {
+        listenOn = false;
+        setMic(i, "میکروفن بسته است");
+        toast("در تنظیمات سافاری میکروفن را اجازه بده");
+      }
+    };
+    r.onend = function () {
+      rec = null;
+      if (listenOn && recIndex === i) setTimeout(arm, 60);
+    };
+    try {
+      r.start();
+      rec = r;
+    } catch (e) {
+      setTimeout(arm, 280);
+    }
+  }
+  arm();
+  return true;
+}
+function startTalk(i, btn) {
+  if (recording && recIndex === i) {
+    finishTalk(i);
+    return;
+  }
+  if (recording) finishTalk(recIndex);
+  recIndex = i;
+  recording = true;
+  recPcm = [];
   recStarted = Date.now();
+  recFinal = items[i].goft || items[i].vaghee || "";
   markBtn(i, true);
-  recClock = setInterval(() => {
+  const dict = startDictationLoop(i);
+  recClock = setInterval(function () {
     const s = Math.floor((Date.now() - recStarted) / 1000);
-    const live = recRms > 0.01 ? "صدا می‌آید" : "ساکت است — بلندتر بگو";
-    setMic(i, "ضبط " + faNum(s) + " ثانیه — " + live + " — تمام را بزن");
+    const has = String(items[i].vaghee || "").trim();
+    setMic(i, "شنیدن " + faNum(s) + " ثانیه" + (has ? " — متن در واقعه است" : " — حرف بزن") + " — تمام را بزن");
   }, 300);
-  setMic(i, "ضبط شروع شد — حرف بزن؛ خودبه‌خود قطع نمی‌شود");
-  toast("ضبط روشن است. هر وقت تمام شد همان دکمه را بزن");
+  if (dict) {
+    setMic(i, "دیکته روشن شد — فارسی بگو؛ متن همان‌جا می‌آید");
+    toast("بگو. متن باید همان موقع در واقعه ظاهر شود");
+  } else {
+    setMic(i, "دیکته در این مرورگر نیست — در جعبه بنویس");
+    toast("در سافاری دیکته نیست؛ در جعبهٔ رونوشت بنویس");
+  }
   if (btn) btn.classList.add("on");
 }
-async function finishTalk(i) {
+function finishTalk(i) {
   if (i == null) i = recIndex;
-  if (!recording && !recPcm.length) {
-    markBtn(i, false);
-    return;
-  }
-  const chunks = recPcm.slice();
-  const rate = recRate;
+  const had = String((items[i] && (items[i].vaghee || items[i].goft)) || recFinal || "").trim();
   stopCapture();
   markBtn(i, false);
-  if (!chunks.length) {
-    setMic(i, "صدایی ضبط نشد — دوباره بگو یا بنویس");
-    toast("صدایی ضبط نشد");
+  if (had) {
+    putVaghee(i, had);
+    setMic(i, "متن در ستون واقعه است");
+    toast("متن ذخیره شد");
     return;
   }
-  const wav = pcmToWav(chunks, rate);
-  if (wav.size < 1000) {
-    setMic(i, "خیلی کوتاه بود — دوباره طولانی‌تر بگو");
-    toast("خیلی کوتاه بود");
-    return;
-  }
-  setMic(i, "دارم صدا را به متن واقعه تبدیل می‌کنم…");
-  try {
-    const r = await KargahSync.transcribe(await blobB64(wav), "audio/wav");
-    const tx = (r && r.text) || "";
-    if (tx) {
-      putVaghee(i, tx, true);
-      setMic(i, "متن رفت توی ستون واقعه");
-      toast("متن آمد توی واقعه");
-    } else {
-      setMic(i, "ابر متن نساخت — در جعبهٔ رونوشت بنویس");
-      toast("در جعبهٔ رونوشت بنویس");
-    }
-  } catch (err) {
-    setMic(i, "تبدیل نشد — در جعبهٔ رونوشت بنویس");
-    toast("تبدیل نشد — بنویس");
-  }
+  setMic(i, "متنی نیامد — کیبورد فارسی را روشن کن و دوباره بگو، یا در جعبه بنویس");
+  toast("متنی نیامد. کیبورد فارسی روشن باشد");
 }
 list.addEventListener("input", (e) => {
   readDom();
