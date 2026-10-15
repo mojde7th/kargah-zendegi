@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="robots" content="noindex,nofollow,noarchive"/>
+<meta name="googlebot" content="noindex,nofollow"/>
+<title>دفتر</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#efe6d4;
+  --paper:#fffaf1;
+  --ink:#2c261e;
+  --mute:#7a6e5c;
+  --line:#e2d4bc;
+  --gold:#8a6230;
+  --btn:#2c261e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:18px/1.9 Vazirmatn,Tahoma,sans-serif}
+button,input,textarea{font:inherit}
+#gate{
+  position:fixed;inset:0;z-index:80;background:#1b1712;color:#f6efe2;
+  display:flex;align-items:center;justify-content:center;padding:24px;
+}
+#gate.ok{display:none}
+.gatebox{width:min(420px,100%);text-align:center}
+.gatebox p{color:#cbbda6;font-size:16px}
+.gatebox input{
+  width:100%;margin:12px 0;padding:14px;border-radius:14px;border:1px solid #5a4e3c;
+  background:#2a241c;color:#f6efe2;text-align:center;font-size:20px;
+}
+.gatebox button{
+  width:100%;min-height:52px;border:0;border-radius:14px;background:#e8d7b0;color:#1b1712;font-weight:800;
+}
+.app{display:none;min-height:100%}
+.app.on{display:block}
+.top{
+  position:sticky;top:0;z-index:10;background:rgba(239,230,212,.96);
+  border-bottom:1px solid var(--line);padding:10px 12px;
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+}
+.top button{
+  border:0;border-radius:12px;padding:10px 14px;min-height:46px;font-weight:800;cursor:pointer;
+  background:var(--btn);color:#fffaf1;
+}
+.top button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.saved{margin-right:auto;color:var(--mute);font-size:14px}
+.chips{display:flex;gap:8px;overflow:auto;padding:10px 12px 0}
+.chip{
+  flex:0 0 auto;border:1px solid var(--line);background:var(--paper);border-radius:999px;
+  padding:8px 14px;min-height:42px;cursor:pointer;color:var(--ink);
+}
+.chip.on{background:var(--gold);color:#fff;border-color:var(--gold)}
+.sheet{
+  max-width:760px;margin:12px auto 40px;background:var(--paper);
+  border:1px solid var(--line);border-radius:22px;padding:18px 16px 28px;
+}
+label{display:block;font-weight:800;color:var(--gold);margin:14px 0 6px;font-size:15px}
+.q{display:block;color:var(--mute);font-weight:400;font-size:14px;margin-top:2px}
+input[type=text],textarea{
+  width:100%;border:1px solid var(--line);border-radius:16px;background:#fff;
+  color:var(--ink);padding:14px 16px;
+}
+textarea{min-height:140px;resize:vertical}
+textarea.big{min-height:220px}
+.row{display:flex;gap:8px;margin-top:16px}
+.row button{flex:1;min-height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-weight:800;cursor:pointer}
+.row .danger{color:#8a3b2e}
+.empty{padding:40px 16px;text-align:center;color:var(--mute)}
+@media print{
+  #gate,.top,.chips,.row,.saved{display:none!important}
+  body{background:#fff}
+  .app{display:block!important}
+  .sheet{border:1px solid #c9b89a;break-after:page;box-shadow:none}
+}
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="gatebox">
+    <p>دفتر خالی است. رمز را بزن و بنویس.</p>
+    <input id="pin" type="password" inputmode="text" autocomplete="off" placeholder="رمز"/>
+    <button type="button" id="btnGate">باز شود</button>
+  </div>
+</div>
+<div class="app" id="app">
+  <div class="top">
+    <button type="button" id="btnNew">واقعه تازه</button>
+    <button type="button" class="ghost" id="btnPrint">چاپ</button>
+    <button type="button" class="ghost" id="btnTxt">خروجی متن</button>
+    <span class="saved" id="saved">ذخیره خودکار</span>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div id="main"></div>
+</div>
+<script>
+const LS = "daftar-khali-v1";
+const PIN = "negah1405";
+const FIELDS = [
+  ["title", "نام کوتاه", "یک کلمه برای پیدا کردنش", "text"],
+  ["vaghee", "واقعه", "فقط دوربین. چه شد، کجا، کی چه گفت.", "big"],
+  ["negah", "نگاه", "چشم تو کجا بود. چشم او کجا بود.", "area"],
+  ["naqab", "نقاب و نقش", "کدام نسخه از تو جلو آمد تا زنده بماند.", "area"],
+  ["olgo", "الگو", "محرک، کار بدن، کار دهان، بعد چه شد.", "area"],
+  ["dokon", "دکان", "اگر آرام می‌ماندی، چه کار سختی لازم بود.", "area"],
+  ["tars", "ترس و مبادا", "مبادا چه.", "area"],
+  ["darun", "درون", "گلو، سینه، صورت، زمان.", "area"],
+  ["sen", "سناریوها", "سه احتمال. همان را که بدنت گرم کرد نگه دار.", "area"],
+  ["jumle", "جملهٔ ته", "با شاید شروع کن.", "area"]
+];
+
+function empty() {
+  const o = { id: Date.now().toString(36) };
+  FIELDS.forEach(([k]) => { o[k] = ""; });
+  return o;
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS) || "{}");
+    if (Array.isArray(s.items)) return s;
+  } catch (e) {}
+  return { items: [], cur: 0 };
+}
+function save(st) {
+  st.saved = Date.now();
+  localStorage.setItem(LS, JSON.stringify(st));
+  const el = document.getElementById("saved");
+  if (el) el.textContent = "ذخیره شد";
+}
+function fa(n) {
+  return String(n).replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+}
+
+const gate = document.getElementById("gate");
+const app = document.getElementById("app");
+if (sessionStorage.getItem("daftar-ok") === "1") {
+  gate.classList.add("ok");
+  app.classList.add("on");
+}
+document.getElementById("btnGate").onclick = openGate;
+document.getElementById("pin").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") openGate();
+});
+function openGate() {
+  const v = String(document.getElementById("pin").value || "").trim();
+  if (v !== PIN) {
+    document.getElementById("pin").value = "";
+    document.getElementById("pin").placeholder = "درست نبود";
+    return;
+  }
+  sessionStorage.setItem("daftar-ok", "1");
+  gate.classList.add("ok");
+  app.classList.add("on");
+  paint();
+}
+
+let st = load();
+if (!st.items.length) {
+  st.items = [empty()];
+  st.cur = 0;
+}
+
+function curItem() {
+  if (!st.items.length) {
+    st.items = [empty()];
+    st.cur = 0;
+  }
+  st.cur = Math.max(0, Math.min(st.items.length - 1, st.cur || 0));
+  return st.items[st.cur];
+}
+
+function paintChips() {
+  const box = document.getElementById("chips");
+  box.innerHTML = "";
+  st.items.forEach((it, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip" + (i === st.cur ? " on" : "");
+    b.textContent = it.title || ("واقعه " + fa(i + 1));
+    b.onclick = () => { read(); st.cur = i; save(st); paint(); };
+    box.appendChild(b);
+  });
+}
+
+function paint() {
+  if (!app.classList.contains("on")) return;
+  paintChips();
+  const it = curItem();
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+  if (!st.items.length) {
+    main.innerHTML = '<div class="empty">هنوز واقعه‌ای نیست. بالا، واقعه تازه را بزن.</div>';
+    return;
+  }
+  const sheet = document.createElement("div");
+  sheet.className = "sheet";
+  FIELDS.forEach(([k, lab, q, kind]) => {
+    const lbl = document.createElement("label");
+    lbl.innerHTML = lab + '<span class="q">' + q + "</span>";
+    sheet.appendChild(lbl);
+    let n;
+    if (kind === "text") {
+      n = document.createElement("input");
+      n.type = "text";
+    } else {
+      n = document.createElement("textarea");
+      if (kind === "big") n.className = "big";
+      n.rows = kind === "big" ? 8 : 4;
+    }
+    n.dataset.k = k;
+    n.value = it[k] || "";
+    n.placeholder = "این‌جا بنویس";
+    sheet.appendChild(n);
+  });
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML =
+    '<button type="button" id="btnDup">کپی همین</button>' +
+    '<button type="button" class="danger" id="btnDel">حذف</button>';
+  sheet.appendChild(row);
+  main.appendChild(sheet);
+  sheet.querySelector("#btnDup").onclick = () => {
+    read();
+    const c = Object.assign({}, curItem(), { id: Date.now().toString(36), title: (curItem().title || "") + " — دوباره" });
+    st.items.splice(st.cur + 1, 0, c);
+    st.cur += 1;
+    save(st);
+    paint();
+  };
+  sheet.querySelector("#btnDel").onclick = () => {
+    if (!confirm("این واقعه پاک شود؟")) return;
+    st.items.splice(st.cur, 1);
+    st.cur = Math.max(0, st.cur - 1);
+    save(st);
+    paint();
+  };
+}
+
+function read() {
+  const it = st.items[st.cur];
+  if (!it) return;
+  document.querySelectorAll("[data-k]").forEach((n) => {
+    it[n.dataset.k] = n.value;
+  });
+}
+
+document.getElementById("main").addEventListener("input", () => {
+  read();
+  save(st);
+  paintChips();
+});
+document.getElementById("btnNew").onclick = () => {
+  read();
+  st.items.push(empty());
+  st.cur = st.items.length - 1;
+  save(st);
+  paint();
+  window.scrollTo(0, 0);
+};
+document.getElementById("btnPrint").onclick = () => {
+  read();
+  save(st);
+  window.print();
+};
+document.getElementById("btnTxt").onclick = () => {
+  read();
+  save(st);
+  let out = "دفتر واقعه\n" + new Date().toLocaleString("fa-IR") + "\n\n";
+  st.items.forEach((it, i) => {
+    out += "—— " + (it.title || ("واقعه " + (i + 1))) + " ——\n";
+    FIELDS.forEach(([k, lab]) => {
+      if (k === "title") return;
+      out += lab + ":\n" + (it[k] || "—") + "\n\n";
+    });
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([out], { type: "text/plain;charset=utf-8" }));
+  a.download = "daftar.txt";
+  a.click();
+};
+paint();
+</script>
+</body>
+</html>
