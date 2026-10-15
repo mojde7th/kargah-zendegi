@@ -2,8 +2,9 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8"/>
+<meta http-equiv="Cache-Control" content="no-store"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>فهرست کارگاه زندگی</title>
+<title>فهرست کارگاه زندگی — همگام</title>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
 body{margin:0;padding:28px 16px 80px;background:#0a0e14;color:#eef4fa;font:18px/1.85 Vazirmatn,Tahoma,sans-serif}
@@ -39,21 +40,13 @@ code{direction:ltr;display:inline-block;unicode-bidi:isolate}
   <button type="button" id="btnHdr">پنهان هدر</button>
 </div>
 
-<div class="sync hidable">
-  <h2>همگام ابری</h2>
-  <p>خودکار به ابر وصل می‌شود. لازم نیست هر بار کد بسازی. اگر دستگاه تازه است و خالی می‌بینی، کمی صبر کن یا «تازه‌کردن از ابر» را بزن.</p>
-  <p>وضعیت: <span id="syncState">هنوز وصل نیست</span></p>
+<div class="sync">
+  <h2>یک انبار ابری برای لپ‌تاپ و گوشی</h2>
+  <p>هر دو به یک جا وصل می‌شوند. کد جدا نساز. اگر وضعیت قرمز بود «وصل دوباره» را بزن.</p>
+  <p>وضعیت: <span id="syncState">در حال وصل…</span></p>
   <div class="bar">
-    <button type="button" id="btnMake">ساخت کد همگام</button>
-    <button type="button" id="btnCopyRoom">کپی لینک گوشی</button>
-    <button type="button" id="btnCopyProg">کپی لینک پیشرفت</button>
-    <button type="button" id="btnPull">تازه‌کردن از ابر</button>
+    <button type="button" id="btnPull">وصل دوباره</button>
   </div>
-  <div class="bar">
-    <input id="roomIn" type="text" placeholder="کد همگام را اینجا بچسبان" autocomplete="off"/>
-    <button type="button" id="btnJoin">وصل شو</button>
-  </div>
-  <p>کد فعلی: <code id="roomCode">—</code></p>
 </div>
 
 <div class="bar">
@@ -69,7 +62,7 @@ code{direction:ltr;display:inline-block;unicode-bidi:isolate}
 </div>
 <div id="list"></div>
 <p class="note hidable">فرم خالی برای تو و همکلاسی‌هاست. کارگاه ۱۶۲ صفحه‌ای یکی است؛ تیک نسخه‌های قبلی داخل همین یکی جمع می‌شود.</p>
-<script src="workshop-sync.js"></script>
+<script src="workshop-sync.js?v=8"></script>
 <script>
 const GUIDES = [
   {
@@ -150,9 +143,10 @@ function toast(msg) {
   el._t = setTimeout(() => { el.style.display = "none"; }, 2400);
 }
 function paintSync() {
-  const id = window.KargahSync ? KargahSync.room() : "";
-  document.getElementById("roomCode").textContent = id || "—";
-  document.getElementById("syncState").textContent = id ? "وصل به ابر" : "هنوز وصل نیست";
+  const st = window.KargahSync && KargahSync.status ? KargahSync.status() : {};
+  const el = document.getElementById("syncState");
+  if (st && st.ok) el.textContent = "وصل شد — لپ‌تاپ و گوشی یکی‌اند";
+  else el.textContent = "ابر وصل نشد" + (st && st.err ? " — " + st.err : "");
 }
 function paint() {
   const sort = document.getElementById("sort").value;
@@ -201,36 +195,14 @@ function copy(text) {
     prompt("کپی کن", text);
   });
 }
-document.getElementById("btnMake").onclick = async () => {
-  try {
-    await KargahSync.createRoom();
-    paintSync();
-    copy(KargahSync.roomLink());
-    toast("کد ساخته شد — لینک گوشی کپی شد");
-  } catch (e) {
-    toast("ساخت کد نشد؛ کمی بعد دوباره بزن");
-  }
-};
-document.getElementById("btnCopyRoom").onclick = () => {
-  const u = KargahSync.roomLink();
-  if (!u) { toast("اول کد بساز"); return; }
-  copy(u);
-};
-document.getElementById("btnCopyProg").onclick = () => copy(KargahSync.encodeLink());
 document.getElementById("btnPull").onclick = async () => {
-  const ok = await KargahSync.pull();
-  paint();
-  toast(ok ? "از ابر آمد" : "ابر در دسترس نبود");
-};
-document.getElementById("btnJoin").onclick = async () => {
   try {
-    await KargahSync.joinRoom(document.getElementById("roomIn").value);
-    paintSync();
-    paint();
-    toast("وصل شد");
-  } catch (e) {
-    toast("این کد پیدا نشد");
-  }
+    await KargahSync.boot();
+  } catch (e) {}
+  paintSync();
+  paint();
+  const st = KargahSync.status();
+  toast(st.ok ? "از ابر آمد" : "ابر وصل نشد");
 };
 
 function applyHdr(off) {
@@ -247,11 +219,25 @@ function startUi() {
   paintSync();
   paint();
 }
+function refreshCloud() {
+  if (!window.KargahSync || !KargahSync.boot) return;
+  KargahSync.boot().then(function () {
+    paintSync();
+    paint();
+  }).catch(function () {
+    paintSync();
+    paint();
+  });
+}
 if (window.KargahSync && KargahSync.boot) {
   KargahSync.boot().then(startUi).catch(startUi);
 } else {
   startUi();
 }
+setInterval(refreshCloud, 15000);
+document.addEventListener("visibilitychange", function () {
+  if (!document.hidden) refreshCloud();
+});
 </script>
 </body>
 </html>

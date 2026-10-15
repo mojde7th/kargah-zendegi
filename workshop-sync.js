@@ -2,7 +2,11 @@
 (function (global) {
   const ROOM_LS = "kargah-sync-room";
   const DEFAULT_ROOM = "zendegi-home";
-  const API = "https://kargah-sync.minasi24100.workers.dev";
+  const APIS = [
+    "https://kargah-sync.minasi24100.workers.dev"
+  ];
+  let API = APIS[0];
+  let lastStatus = { ok: false, err: "", at: 0, api: "" };
   const KNOWN = [
     "kargah-zendegi-v1",
     "nama-neshast-negah-v1",
@@ -189,35 +193,48 @@
   }
 
   async function api(path, method, body) {
-    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 20000) : 0;
-    try {
-      const r = await fetch(API + path, {
-        method: method,
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: body != null ? JSON.stringify(body) : undefined,
-        signal: ctrl ? ctrl.signal : undefined
-      });
-      if (!r.ok) throw new Error("api " + r.status);
-      return r.json();
-    } finally {
-      if (timer) clearTimeout(timer);
+    let lastErr = "offline";
+    for (let a = 0; a < APIS.length; a++) {
+      const base = APIS[a];
+      const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 12000) : 0;
+      try {
+        const r = await fetch(base + path, {
+          method: method,
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: body != null ? JSON.stringify(body) : undefined,
+          signal: ctrl ? ctrl.signal : undefined
+        });
+        if (!r.ok) {
+          lastErr = "api " + r.status;
+          if (r.status === 404) {
+            API = base;
+            throw new Error(lastErr);
+          }
+          continue;
+        }
+        API = base;
+        lastStatus = { ok: true, err: "", at: Date.now(), api: base };
+        return r.json();
+      } catch (e) {
+        lastErr = String(e && e.message ? e.message : e);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     }
+    lastStatus = { ok: false, err: lastErr, at: Date.now(), api: "" };
+    throw new Error(lastErr);
   }
 
   let pushTimer = 0;
   function room() {
-    try {
-      return localStorage.getItem(ROOM_LS) || "";
-    } catch (e) {
-      return "";
-    }
+    return DEFAULT_ROOM;
   }
   function setRoom(id) {
     try {
-      if (id) localStorage.setItem(ROOM_LS, id);
-      else localStorage.removeItem(ROOM_LS);
+      localStorage.setItem(ROOM_LS, DEFAULT_ROOM);
     } catch (e) {}
+    return DEFAULT_ROOM;
   }
   function roomLink() {
     const id = room();
@@ -227,17 +244,14 @@
   }
 
   async function pull() {
-    const id = room();
-    if (!id) return false;
+    const id = DEFAULT_ROOM;
     try {
-      const r = await fetch(API + "/room/" + encodeURIComponent(id), {
-        headers: { Accept: "application/json" }
-      });
-      if (r.status === 404) return false;
-      if (!r.ok) throw new Error("api " + r.status);
-      applySnapshot(await r.json());
+      const remote = await api("/room/" + encodeURIComponent(id), "GET");
+      applySnapshot(remote);
       return true;
     } catch (e) {
+      const msg = String(e && e.message ? e.message : e);
+      if (msg.indexOf("404") !== -1 || msg.indexOf("api 404") !== -1) return false;
       return null;
     }
   }
@@ -261,6 +275,11 @@
 
   async function boot() {
     migrateAliases();
+    let old = "";
+    try {
+      old = localStorage.getItem(ROOM_LS) || "";
+    } catch (e) {}
+    setRoom(DEFAULT_ROOM);
     try {
       const usp = new URLSearchParams(location.search);
       const s = usp.get("s");
@@ -268,28 +287,28 @@
         const snap = decodeQuery(s);
         if (snap) applySnapshot(snap);
       }
-      const r = usp.get("room");
-      if (r) setRoom(r.replace(/[^a-zA-Z0-9_-]/g, ""));
     } catch (e) {}
-    if (!room()) setRoom(DEFAULT_ROOM);
+    if (old && old !== DEFAULT_ROOM) {
+      try {
+        const prev = await api("/room/" + encodeURIComponent(old), "GET");
+        applySnapshot(prev);
+      } catch (e) {}
+    }
     const got = await pull();
-    if (got === null) return;
+    if (got === null) return lastStatus;
     await push();
+    return lastStatus;
   }
 
   async function createRoom() {
-    const j = await api("/room", "POST", snapshot());
-    setRoom(j.id);
-    return j.id;
-  }
-  async function joinRoom(id) {
-    id = String(id || "").trim();
-    if (!id) throw new Error("empty");
-    setRoom(id);
-    const got = await pull();
-    if (got === null) throw new Error("join");
+    setRoom(DEFAULT_ROOM);
     await push();
-    return id;
+    return DEFAULT_ROOM;
+  }
+  async function joinRoom() {
+    setRoom(DEFAULT_ROOM);
+    await boot();
+    return DEFAULT_ROOM;
   }
 
   async function helpFill(body) {
@@ -301,7 +320,11 @@
 
   global.KargahSync = {
     API: API,
+    APIS: APIS,
     DEFAULT_ROOM: DEFAULT_ROOM,
+    status: function () {
+      return lastStatus;
+    },
     KNOWN: KNOWN,
     faNum: faNum,
     snapshot: snapshot,
