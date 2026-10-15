@@ -17,7 +17,8 @@
     "personal-os-recomp-v2",
     "personal-os-kamel-v2",
     "form-neshast-v1",
-    "form-vaghee-class-v1"
+    "form-vaghee-class-v1",
+    "nama-hamgam-kilid-v1"
   ];
   const ALIASES = {
     "kargah-zendegi-v1": [
@@ -29,7 +30,8 @@
   const MAIN = [
     ["kargah-zendegi-v1", 162],
     ["nama-vaghee-form-v2", 15],
-    ["nama-neshast-negah-v1", 23]
+    ["nama-neshast-negah-v1", 23],
+    ["nama-hamgam-kilid-v1", 14]
   ];
 
   function faNum(n) {
