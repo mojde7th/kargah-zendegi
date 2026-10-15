@@ -79,7 +79,7 @@ textarea{border:1px dashed var(--line);border-radius:4px;padding:8px;background:
   <p class="hint hidable">خانه‌ها: واقعه، نگاه، نقاب و نقش، الگو، دکان، ترس و مبادا، درون، سناریوها، جملهٔ ته.</p>
   <div id="list"></div>
 </div>
-<script src="workshop-sync.js"></script>
+<script src="workshop-sync.js?v=5"></script>
 <script>
 const LS = "form-vaghee-class-v1";
 const FIELDS = [
@@ -293,28 +293,21 @@ function parsePasted(text) {
   if (!Object.keys(out).length) out.vaghee = String(text || "").trim();
   return out;
 }
-function Speech() {
-  return window.SpeechRecognition || window.webkitSpeechRecognition;
-}
 function setMic(i, msg) {
   const eln = list.querySelector('[data-mic="' + i + '"]');
   if (eln) eln.textContent = msg;
 }
-let listenOn = false;
-let audioRec = null;
-let audioStream = null;
-let audioChunks = [];
-let sttTimer = 0;
-function stopStt() {
-  listenOn = false;
-  clearTimeout(sttTimer);
-  try { if (rec) rec.stop(); } catch (e) {}
-  rec = null;
-}
-function stopSpeech() {
-  stopStt();
-  try { if (audioRec && audioRec.state !== "inactive") audioRec.stop(); } catch (e) {}
-}
+let recording = false;
+let recCtx = null;
+let recProc = null;
+let recGain = null;
+let recSrc = null;
+let recStream = null;
+let recPcm = [];
+let recRate = 16000;
+let recClock = 0;
+let recStarted = 0;
+let recRms = 0;
 function putVaghee(i, text, append) {
   const add = String(text || "").trim();
   if (!add) return;
@@ -346,124 +339,148 @@ function blobB64(blob) {
 function speakBtn(i) {
   return list.querySelector('[data-speak="' + i + '"]');
 }
-function startSttLoop(i) {
-  const Rec = Speech();
-  if (!Rec) return;
-  listenOn = true;
-  recIndex = i;
-  recFinal = items[i].goft || items[i].vaghee || "";
-  function loop() {
-    if (!listenOn || recIndex !== i) return;
-    try { if (rec) rec.stop(); } catch (e) {}
-    rec = new Rec();
-    rec.lang = "fa-IR";
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.onresult = (ev) => {
-      let inter = "";
-      for (let n = ev.resultIndex; n < ev.results.length; n++) {
-        const tx = ev.results[n][0].transcript;
-        if (ev.results[n].isFinal) recFinal += (recFinal && !/\s$/.test(recFinal) ? " " : "") + tx;
-        else inter += tx;
-      }
-      const shown = (recFinal + (inter ? " " + inter : "")).trim();
-      if (shown) putVaghee(i, shown);
-      setMic(i, "دارم می‌شنوم — قطع نمی‌شود تا «تمام» بزنی");
-    };
-    rec.onerror = (ev) => {
-      const err = ev && ev.error;
-      if (err === "no-speech" || err === "aborted" || err === "network") return;
-    };
-    rec.onend = () => {
-      rec = null;
-      if (listenOn && recIndex === i) sttTimer = setTimeout(loop, 180);
-    };
-    try {
-      rec.start();
-    } catch (e) {
-      sttTimer = setTimeout(loop, 400);
-    }
+function pcmToWav(chunks, sampleRate) {
+  let total = 0;
+  chunks.forEach((c) => { total += c.length; });
+  const merged = new Float32Array(total);
+  let off = 0;
+  chunks.forEach((c) => { merged.set(c, off); off += c.length; });
+  const target = 16000;
+  const step = sampleRate / target;
+  const n = Math.max(1, Math.floor(merged.length / step));
+  const pcm = new Int16Array(n);
+  for (let i = 0; i < n; i++) {
+    const s = Math.max(-1, Math.min(1, merged[Math.min(merged.length - 1, Math.floor(i * step))]));
+    pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
   }
-  loop();
+  const bytes = pcm.byteLength;
+  const buf = new ArrayBuffer(44 + bytes);
+  const v = new DataView(buf);
+  function wstr(at, s) {
+    for (let i = 0; i < s.length; i++) v.setUint8(at + i, s.charCodeAt(i));
+  }
+  wstr(0, "RIFF");
+  v.setUint32(4, 36 + bytes, true);
+  wstr(8, "WAVE");
+  wstr(12, "fmt ");
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, target, true);
+  v.setUint32(28, target * 2, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  wstr(36, "data");
+  v.setUint32(40, bytes, true);
+  new Uint8Array(buf, 44).set(new Uint8Array(pcm.buffer));
+  return new Blob([buf], { type: "audio/wav" });
+}
+function stopCapture() {
+  clearInterval(recClock);
+  try { if (recProc) recProc.disconnect(); } catch (e) {}
+  try { if (recSrc) recSrc.disconnect(); } catch (e) {}
+  try { if (recGain) recGain.disconnect(); } catch (e) {}
+  try { if (recCtx && recCtx.state !== "closed") recCtx.close(); } catch (e) {}
+  if (recStream) recStream.getTracks().forEach((t) => t.stop());
+  recProc = recSrc = recGain = recCtx = recStream = null;
+  recording = false;
+}
+function markBtn(i, on) {
+  const b = speakBtn(i);
+  if (!b) return;
+  b.classList.toggle("on", !!on);
+  b.textContent = on ? "در حال ضبط — بزن تا تمام شود" : "بگو — تا وقتی دوباره بزنی";
 }
 async function startTalk(i, btn) {
+  if (recording) {
+    await finishTalk(recIndex);
+    if (recIndex === i) return;
+  }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    startSttLoop(i);
-    toast("فقط گفتار زنده — کروم بهتر است");
+    toast("این مرورگر میکروفن ندارد — در جعبهٔ رونوشت بنویس");
     return;
   }
+  let stream;
   try {
-    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 }
+    });
   } catch (err) {
     toast("دسترسی میکروفن داده نشد");
     return;
   }
-  recIndex = i;
-  audioChunks = [];
-  const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-    ? "audio/webm;codecs=opus"
-    : (MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "");
-  audioRec = mime ? new MediaRecorder(audioStream, { mimeType: mime }) : new MediaRecorder(audioStream);
-  audioRec.ondataavailable = (ev) => { if (ev.data && ev.data.size) audioChunks.push(ev.data); };
-  audioRec.onstop = async () => {
-    if (audioStream) audioStream.getTracks().forEach((t) => t.stop());
-    audioStream = null;
-    const blob = new Blob(audioChunks, { type: audioRec.mimeType || "audio/webm" });
-    audioRec = null;
-    const b = speakBtn(i);
-    if (b) {
-      b.classList.remove("on");
-      b.textContent = "بگو — تا وقتی دوباره بزنی";
-    }
-    if (!blob.size) {
-      if (recFinal) putVaghee(i, recFinal, true);
-      setMic(i, recFinal ? "متن رفت توی واقعه" : "چیزی ضبط نشد");
-      return;
-    }
-    setMic(i, "دارم صدا را به متن واقعه تبدیل می‌کنم…");
-    try {
-      const r = await KargahSync.transcribe(await blobB64(blob), blob.type);
-      const tx = (r && r.text) || "";
-      if (tx) {
-        putVaghee(i, tx, true);
-        setMic(i, "رونوشت رفت توی ستون واقعه");
-        toast("متن آمد توی واقعه");
-      } else if (recFinal) {
-        putVaghee(i, recFinal, true);
-        setMic(i, "متن زنده رفت توی واقعه");
-      } else {
-        setMic(i, "متن ساخته نشد — در جعبهٔ رونوشت بنویس");
-        toast("در جعبهٔ رونوشت بنویس");
-      }
-    } catch (err) {
-      if (recFinal) putVaghee(i, recFinal, true);
-      setMic(i, recFinal ? "متن زنده رفت توی واقعه" : "تبدیل نشد — بنویس");
-    }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  recCtx = new AC();
+  if (recCtx.state === "suspended") await recCtx.resume();
+  recRate = recCtx.sampleRate || 44100;
+  recStream = stream;
+  recSrc = recCtx.createMediaStreamSource(stream);
+  recProc = recCtx.createScriptProcessor(4096, 1, 1);
+  recGain = recCtx.createGain();
+  recGain.gain.value = 0;
+  recPcm = [];
+  recRms = 0;
+  recProc.onaudioprocess = (ev) => {
+    if (!recording) return;
+    const input = ev.inputBuffer.getChannelData(0);
+    recPcm.push(new Float32Array(input));
+    let sum = 0;
+    for (let n = 0; n < input.length; n++) sum += input[n] * input[n];
+    recRms = Math.sqrt(sum / input.length);
   };
-  audioRec.start(1000);
-  startSttLoop(i);
-  if (btn) {
-    btn.classList.add("on");
-    btn.textContent = "دارم می‌شنوم — دوباره بزن تا تمام شود";
-  }
-  setMic(i, "گوش می‌دهد تا خودت تمام کنی");
-  toast("بگو. قطع نمی‌شود تا تمام را بزنی");
+  recSrc.connect(recProc);
+  recProc.connect(recGain);
+  recGain.connect(recCtx.destination);
+  recording = true;
+  recIndex = i;
+  recStarted = Date.now();
+  markBtn(i, true);
+  recClock = setInterval(() => {
+    const s = Math.floor((Date.now() - recStarted) / 1000);
+    const live = recRms > 0.01 ? "صدا می‌آید" : "ساکت است — بلندتر بگو";
+    setMic(i, "ضبط " + faNum(s) + " ثانیه — " + live + " — تمام را بزن");
+  }, 300);
+  setMic(i, "ضبط شروع شد — حرف بزن؛ خودبه‌خود قطع نمی‌شود");
+  toast("ضبط روشن است. هر وقت تمام شد همان دکمه را بزن");
+  if (btn) btn.classList.add("on");
 }
-function finishTalk(i) {
+async function finishTalk(i) {
   if (i == null) i = recIndex;
-  stopStt();
-  const b = speakBtn(i);
-  if (b) {
-    b.classList.remove("on");
-    b.textContent = "بگو — تا وقتی دوباره بزنی";
-  }
-  if (audioRec && audioRec.state !== "inactive") {
-    try { audioRec.stop(); } catch (e) {}
-    toast("تمام — تبدیل به متن");
+  if (!recording && !recPcm.length) {
+    markBtn(i, false);
     return;
   }
-  if (recFinal) putVaghee(i, recFinal, true);
-  setMic(i, recFinal ? "متن رفت توی ستون واقعه" : "متنی نبود");
+  const chunks = recPcm.slice();
+  const rate = recRate;
+  stopCapture();
+  markBtn(i, false);
+  if (!chunks.length) {
+    setMic(i, "صدایی ضبط نشد — دوباره بگو یا بنویس");
+    toast("صدایی ضبط نشد");
+    return;
+  }
+  const wav = pcmToWav(chunks, rate);
+  if (wav.size < 1000) {
+    setMic(i, "خیلی کوتاه بود — دوباره طولانی‌تر بگو");
+    toast("خیلی کوتاه بود");
+    return;
+  }
+  setMic(i, "دارم صدا را به متن واقعه تبدیل می‌کنم…");
+  try {
+    const r = await KargahSync.transcribe(await blobB64(wav), "audio/wav");
+    const tx = (r && r.text) || "";
+    if (tx) {
+      putVaghee(i, tx, true);
+      setMic(i, "متن رفت توی ستون واقعه");
+      toast("متن آمد توی واقعه");
+    } else {
+      setMic(i, "ابر متن نساخت — در جعبهٔ رونوشت بنویس");
+      toast("در جعبهٔ رونوشت بنویس");
+    }
+  } catch (err) {
+    setMic(i, "تبدیل نشد — در جعبهٔ رونوشت بنویس");
+    toast("تبدیل نشد — بنویس");
+  }
 }
 list.addEventListener("input", (e) => {
   readDom();
@@ -494,7 +511,7 @@ list.addEventListener("click", async (e) => {
   const speak = e.target.closest("[data-speak]");
   if (speak) {
     const i = +speak.dataset.speak;
-    if (listenOn && recIndex === i) {
+    if (recording && recIndex === i) {
       finishTalk(i);
       return;
     }
