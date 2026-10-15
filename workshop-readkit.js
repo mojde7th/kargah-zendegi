@@ -325,6 +325,30 @@ window.WorkshopReadkit = function (cfg) {
   }
   function setupHdr() {
     const row = document.querySelector(".freeze .row");
+    if (row && !document.getElementById("btnSyncCode")) {
+      const c = document.createElement("button");
+      c.id = "btnSyncCode";
+      c.type = "button";
+      c.textContent = "کپی کد همگام";
+      row.appendChild(c);
+      c.onclick = () => {
+        try {
+          if (!window.KargahSync || !KargahSync.encodeCode) {
+            toast("همگام آماده نیست");
+            return;
+          }
+          const t = KargahSync.encodeCode();
+          navigator.clipboard.writeText(t).then(
+            () => toast("کد همگام کپی شد — در فهرست گوشی بچسبان"),
+            () => {
+              prompt("کپی کن", t);
+            }
+          );
+        } catch (e) {
+          toast("کد ساخته نشد");
+        }
+      };
+    }
     if (row && !document.getElementById("btnHdr")) {
       const b = document.createElement("button");
       b.id = "btnHdr";

@@ -4,50 +4,52 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta http-equiv="Cache-Control" content="no-store"/>
-<title>فرم واقعه — روی گوشی</title>
+<title>فرم خالی واقعه</title>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet"/>
 <style>
-:root{--paper:#f6efe2;--ink:#2a241c;--line:#c9b89a;--gold:#7a5c2e;--screen:#1b1712;--red:#9b2c2c}
+:root{--paper:#f7f1e6;--ink:#2a241c;--line:#d4c6ad;--gold:#7a5c2e;--screen:#12161c;--red:#9b2c2c}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--screen);color:var(--paper);font:16px/1.85 Vazirmatn,Tahoma,sans-serif}
-.toolbar{position:sticky;top:0;z-index:20;background:#14110d;border-bottom:1px solid #3a3328;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.toolbar a,.toolbar button{font:700 14px Vazirmatn,sans-serif;background:#2a241c;color:var(--paper);border:1px solid #5a4e3c;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer;text-decoration:none}
-.wrap{max-width:880px;margin:0 auto;padding:16px 14px 100px}
-h1{font-size:1.2rem;margin:0 0 8px;color:#e8d7b0}
-.sub{color:#cbbda6;margin:0 0 16px}
-.sheet{background:var(--paper);color:var(--ink);border:1px solid #d8c7a8;border-radius:14px;padding:16px;margin:0 0 22px}
-.sheet h2{margin:0 0 10px;font-size:1.05rem;color:var(--gold)}
-.headrow{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+html,body{margin:0;background:var(--screen);color:#eef4fa;font:16px/1.85 Vazirmatn,Tahoma,sans-serif}
+.toolbar{position:sticky;top:0;z-index:20;background:#0a0e14;border-bottom:1px solid #334155;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar a,.toolbar button{font:700 14px Vazirmatn,sans-serif;background:#151b24;color:#eef4fa;border:1px solid #334155;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer;text-decoration:none}
+.wrap{max-width:860px;margin:0 auto;padding:20px 14px 100px}
+h1{font-size:1.25rem;margin:0 0 6px;color:#7dd3c7}
+.sub{color:#9bb0c3;margin:0 0 18px}
+.sheet{background:var(--paper);color:var(--ink);border:1px solid #d8c7a8;border-radius:16px;padding:18px 16px 20px;margin:0 0 22px}
+.sheet h2{margin:0 0 12px;font-size:1.05rem;color:var(--gold)}
+.step{display:flex;align-items:center;gap:8px;margin:16px 0 8px;font-weight:800;font-size:.88rem;color:var(--gold)}
+.step b{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--gold);color:#fff;font-size:.78rem}
+.headrow{display:flex;gap:8px;align-items:center;margin-bottom:4px}
 .headrow input{flex:1}
-label{display:block;font-weight:800;font-size:.82rem;color:var(--gold);margin:10px 0 4px}
-input,textarea{width:100%;border:1px dashed var(--line);border-radius:10px;background:rgba(255,255,255,.45);color:var(--ink);font:16px/1.8 Vazirmatn,Tahoma,sans-serif;padding:10px}
-textarea{resize:vertical;min-height:72px}
-#liveBox{min-height:180px;font-size:18px;background:#fff;border:2px solid var(--gold)}
-.recbar{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
-.recbtn{flex:0 0 auto;width:84px;height:84px;border-radius:50%;border:0;background:var(--red);color:#fff;font:800 16px Vazirmatn,sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(155,44,44,.35)}
-.recbtn.on{animation:pulse 1.2s infinite;background:#c0392b}
-@keyframes pulse{50%{transform:scale(1.06)}}
+label{display:block;font-weight:800;font-size:.82rem;color:var(--gold);margin:8px 0 4px}
+input,textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:16px/1.8 Vazirmatn,Tahoma,sans-serif;padding:10px}
+textarea{resize:vertical;min-height:64px}
+#liveBox{min-height:168px;font-size:17px;border:1px solid var(--gold)}
+.recbar{display:flex;gap:12px;align-items:center;margin:4px 0 8px;padding:10px 12px;background:#efe6d4;border-radius:12px}
+.recbtn{flex:0 0 auto;min-width:92px;height:48px;border-radius:12px;border:0;background:var(--red);color:#fff;font:800 15px Vazirmatn,sans-serif;cursor:pointer}
+.recbtn.on{background:#c0392b}
 .recmeta{flex:1}
-.mic{margin:0;color:var(--gold);font-weight:800;min-height:1.5em}
-.lvl{height:10px;background:#e6dcc8;border-radius:6px;overflow:hidden;margin-top:8px}
+.mic{margin:0;color:var(--gold);font-weight:700;min-height:1.4em;font-size:.9rem}
+.lvl{height:6px;background:#e0d4be;border-radius:6px;overflow:hidden;margin-top:6px}
 .lvl>i{display:block;height:100%;width:2%;background:var(--red);transition:width .12s}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .del{background:transparent;border:1px solid var(--line);color:#7a3b2e;border-radius:8px;padding:6px 10px;font:700 13px Vazirmatn,sans-serif;cursor:pointer}
-.cloud{margin:0 0 14px;color:#9ad7b8;font-size:.9rem}
-.vagehead{display:flex;gap:10px;align-items:stretch;margin:0 0 12px}
+.vagehead{display:flex;gap:12px;align-items:stretch;margin:0 0 8px}
 .vagcol{flex:1;min-width:0}
-.sidehelp{flex:0 0 150px;display:flex;flex-direction:column;gap:8px;justify-content:flex-end}
-.helpbtn{font:800 14px Vazirmatn,sans-serif;background:var(--gold);color:#fff;border:0;border-radius:12px;padding:12px 10px;min-height:88px;cursor:pointer;line-height:1.4}
-.hint{margin:0 0 4px;font-size:.75rem;color:#8a7048;font-weight:400;line-height:1.6}
+.sidehelp{flex:0 0 148px;display:flex;flex-direction:column;gap:8px;justify-content:flex-start;padding-top:28px}
+.helpbtn{font:800 14px Vazirmatn,sans-serif;background:var(--gold);color:#fff;border:0;border-radius:12px;padding:14px 10px;min-height:72px;cursor:pointer;line-height:1.45}
+.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);min-height:40px;padding:8px 10px}
+.hint{margin:0 0 4px;font-size:.78rem;color:#8a7048;font-weight:400;line-height:1.55}
 .helpst{margin:0;font-size:.8rem;color:var(--gold);font-weight:700;min-height:1.4em;line-height:1.5}
 #wk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#14352e;color:#86e0a3;border:1px solid #86e0a3;padding:10px 18px;border-radius:12px;z-index:80;font:600 15px Vazirmatn,sans-serif;display:none;max-width:90%}
 @media(max-width:700px){
   .grid{grid-template-columns:1fr}
   .vagehead{flex-direction:column}
-  .sidehelp{flex:none;flex-direction:row;align-items:center}
-  .helpbtn{min-height:48px;flex:0 0 auto}
+  .sidehelp{flex:none;flex-direction:row;flex-wrap:wrap;align-items:center;padding-top:0}
+  .helpbtn{min-height:48px;flex:1}
+  .ghost{flex:0 0 auto}
 }
-@media print{.toolbar,.recbar,.sidehelp,.mic,.cloud{display:none!important}}
+@media print{.toolbar,.recbar,.sidehelp,.mic,.step{display:none!important}}
 </style>
 </head>
 <body>
@@ -58,12 +60,11 @@ textarea{resize:vertical;min-height:72px}
   <button type="button" id="btnPrint">چاپ</button>
 </div>
 <div class="wrap">
-  <h1>فرم واقعه — روی گوشی</h1>
-  <p class="sub">ضبط کن. بایست را بزن. تبدیل گفتار روی خود گوشی است، نه ابر فیلترشده. بعد ستون‌ها پر می‌شوند. بار اول مدل کمی طول می‌کشد.</p>
-  <p class="cloud" id="cloud">تبدیل روی خود گوشی است</p>
+  <h1>فرم خالی واقعه</h1>
+  <p class="sub">برگهٔ کلاس. بنویس، یا ضبط کن و بایست را بزن تا متن در واقعه بیاید. کنار واقعه، پیشنهاد ستون‌هاست.</p>
   <div id="list"></div>
 </div>
-<script src="workshop-sync.js?v=13"></script>
+<script src="workshop-sync.js?v=14"></script>
 <script type="module">
 import { pipeline, env } from "./asr-engine/transformers.js";
 env.allowRemoteModels = false;
@@ -186,10 +187,15 @@ function paint() {
     sheet.appendChild(el("h2", {}, "برگهٔ " + faNum(i + 1)));
     sheet.appendChild(head);
 
+    const s1 = el("div", { class: "step" });
+    s1.appendChild(el("b", {}, "۱"));
+    s1.appendChild(document.createTextNode(" نوشتن یا ضبط"));
+    sheet.appendChild(s1);
+
     const recbar = el("div", { class: "recbar" });
     const btn = el("button", { type: "button", class: "recbtn", "data-rec": String(i) }, "ضبط");
     const meta = el("div", { class: "recmeta" });
-    meta.appendChild(el("p", { class: "mic", "data-mic": String(i) }, "ضبط را بزن و حرف بزن"));
+    meta.appendChild(el("p", { class: "mic", "data-mic": String(i) }, "ضبط، حرف بزن، بایست"));
     const lvl = el("div", { class: "lvl" });
     lvl.appendChild(el("i", { "data-lvl": String(i) }));
     meta.appendChild(lvl);
@@ -197,22 +203,32 @@ function paint() {
     recbar.appendChild(meta);
     sheet.appendChild(recbar);
 
+    const s2 = el("div", { class: "step" });
+    s2.appendChild(el("b", {}, "۲"));
+    s2.appendChild(document.createTextNode(" واقعه"));
+    sheet.appendChild(s2);
+
     const vage = el("div", { class: "vagehead" });
     const vcol = el("div", { class: "vagcol" });
-    vcol.appendChild(el("label", {}, "واقعه — متن زنده"));
+    vcol.appendChild(el("label", {}, "واقعه"));
     const live = el("textarea", { id: i === 0 ? "liveBox" : "", "data-k": "vaghee", "data-i": String(i) });
     if (i === 0) live.id = "liveBox";
     live.rows = 8;
-    live.placeholder = "اینجا باید همان لحظه که حرف می‌زنی پر شود";
+    live.placeholder = "اینجا بنویس، یا بعد از بایست متن ضبط اینجا می‌آید";
     live.value = it.vaghee || it.goft || "";
     vcol.appendChild(live);
     const side = el("div", { class: "sidehelp" });
     side.appendChild(el("button", { type: "button", class: "helpbtn", "data-help": String(i) }, "پیشنهاد ستون‌ها"));
-    side.appendChild(el("button", { type: "button", class: "helpbtn", "data-retry": String(i) }, "دوباره تبدیل"));
-    side.appendChild(el("p", { class: "helpst", "data-helpst": String(i) }, "بعد از بایست، متن و ستون‌ها می‌آیند"));
+    side.appendChild(el("button", { type: "button", class: "helpbtn ghost", "data-retry": String(i) }, "دوباره تبدیل"));
+    side.appendChild(el("p", { class: "helpst", "data-helpst": String(i) }, "کنار واقعه بزن تا ستون‌ها پر شوند"));
     vage.appendChild(vcol);
     vage.appendChild(side);
     sheet.appendChild(vage);
+
+    const s3 = el("div", { class: "step" });
+    s3.appendChild(el("b", {}, "۳"));
+    s3.appendChild(document.createTextNode(" ستون‌ها"));
+    sheet.appendChild(s3);
 
     const grid = el("div", { class: "grid" });
     FIELDS.forEach(([k, lab], idx) => {

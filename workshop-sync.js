@@ -26,6 +26,11 @@
       "personal-os-recomp-v1"
     ]
   };
+  const MAIN = [
+    ["kargah-zendegi-v1", 162],
+    ["nama-vaghee-form-v2", 15],
+    ["nama-neshast-negah-v1", 23]
+  ];
 
   function faNum(n) {
     return String(n).replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
@@ -155,43 +160,75 @@
         localStorage.setItem(k, JSON.stringify(merged));
       } catch (e) {}
     });
+    rememberPack();
   }
 
   function encodeLink(origin) {
-    const parts = ["1"];
-    KNOWN.forEach((k) => {
-      const s = readLocal(k);
-      const n = Math.max(
-        8,
-        Object.keys(s.done || {}).reduce((m, id) => {
-          const i = parseInt(String(id).replace(/^p/, ""), 10);
-          return isNaN(i) ? m : Math.max(m, i + 1);
-        }, 0)
-      );
-      const page = Number(s.page) || 0;
-      const bits = packDone(s.done || {}, n);
-      if (countDone(s.done) === 0 && !page) return;
-      parts.push(k, String(n), String(page), bits);
-    });
-    const q = parts.join("~");
+    const q = encodeCode();
     const base =
       origin ||
       (typeof location !== "undefined" ? location.origin + location.pathname.replace(/[^/]+$/, "") : "");
     return base.replace(/\/?$/, "/") + "index.html?s=" + encodeURIComponent(q);
   }
+  function encodeCode() {
+    migrateAliases();
+    const parts = ["1"];
+    MAIN.forEach(function (pair) {
+      const k = pair[0];
+      const n = pair[1];
+      const s = readLocal(k);
+      const page = Number(s.page) || 0;
+      parts.push(k, String(n), String(page), packDone(s.done || {}, n));
+    });
+    return parts.join("~");
+  }
+  function rememberPack() {
+    try {
+      localStorage.setItem("kargah-sync-pack", encodeCode());
+    } catch (e) {}
+  }
   function decodeQuery(q) {
-    const raw = String(q || "").replace(/^s=/, "");
-    const parts = decodeURIComponent(raw).split("~");
-    if (parts[0] !== "1") return null;
-    const keys = {};
-    for (let i = 1; i + 3 < parts.length; i += 4) {
-      const k = parts[i];
-      const n = parseInt(parts[i + 1], 10) || 0;
-      const page = parseInt(parts[i + 2], 10) || 0;
-      const done = unpackDone(parts[i + 3], n);
-      keys[k] = { done: done, page: page, notes: {}, t: Date.now() };
+    try {
+      const raw = String(q || "").replace(/^s=/, "");
+      let decoded = raw;
+      try {
+        decoded = decodeURIComponent(raw);
+      } catch (e) {}
+      const parts = decoded.split("~");
+      if (parts[0] !== "1") return null;
+      const keys = {};
+      for (let i = 1; i + 3 < parts.length; i += 4) {
+        const k = parts[i];
+        const n = parseInt(parts[i + 1], 10) || 0;
+        const page = parseInt(parts[i + 2], 10) || 0;
+        const done = unpackDone(parts[i + 3], n);
+        keys[k] = { done: done, page: page, notes: {}, t: Date.now() };
+      }
+      return { v: 1, t: Date.now(), keys: keys };
+    } catch (e) {
+      return null;
     }
-    return { v: 1, t: Date.now(), keys: keys };
+  }
+  function parsePack(raw) {
+    raw = String(raw || "").trim();
+    if (!raw) return null;
+    try {
+      const m = raw.match(/[?&]s=([^&#]+)/);
+      if (m) raw = decodeURIComponent(m[1].replace(/\+/g, "%20"));
+    } catch (e) {}
+    if (raw.indexOf("%7E") !== -1 || raw.indexOf("%7e") !== -1) {
+      try {
+        raw = decodeURIComponent(raw);
+      } catch (e) {}
+    }
+    return decodeQuery(raw);
+  }
+  function applyPack(raw) {
+    const snap = parsePack(raw);
+    if (!snap) return false;
+    applySnapshot(snap);
+    pushSoon();
+    return true;
   }
 
   function rememberApi(base) {
@@ -357,6 +394,7 @@
     }
   }
   function pushSoon() {
+    rememberPack();
     clearTimeout(pushTimer);
     pushTimer = setTimeout(function () {
       push();
@@ -385,9 +423,14 @@
         applySnapshot(prev);
       } catch (e) {}
     }
+    rememberPack();
     const got = await pull();
-    if (got === null) return lastStatus;
+    if (got === null) {
+      rememberPack();
+      return lastStatus;
+    }
     await push();
+    rememberPack();
     return lastStatus;
   }
 
@@ -522,6 +565,11 @@
     readLocal: readLocal,
     countDone: countDone,
     encodeLink: encodeLink,
+    encodeCode: encodeCode,
+    rememberPack: rememberPack,
+    parsePack: parsePack,
+    applyPack: applyPack,
+    MAIN: MAIN,
     decodeQuery: decodeQuery,
     room: room,
     setRoom: setRoom,
