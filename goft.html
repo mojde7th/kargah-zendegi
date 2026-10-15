@@ -4,87 +4,56 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta http-equiv="Cache-Control" content="no-store"/>
-<title>فرم واقعه — نسخه هفت</title>
+<title>فرم واقعه — ضبط زنده</title>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet"/>
 <style>
-:root{
-  --paper:#f6efe2;
-  --ink:#2a241c;
-  --line:#c9b89a;
-  --gold:#7a5c2e;
-  --screen:#1b1712;
-}
+:root{--paper:#f6efe2;--ink:#2a241c;--line:#c9b89a;--gold:#7a5c2e;--screen:#1b1712;--red:#9b2c2c}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--screen);color:var(--paper);font:16px/1.85 Vazirmatn,Tahoma,sans-serif}
-html.hdr-off .toolbar .hidable{display:none}
 .toolbar{position:sticky;top:0;z-index:20;background:#14110d;border-bottom:1px solid #3a3328;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .toolbar a,.toolbar button{font:700 14px Vazirmatn,sans-serif;background:#2a241c;color:var(--paper);border:1px solid #5a4e3c;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer;text-decoration:none}
-.wrap{max-width:880px;margin:0 auto;padding:18px 14px 80px}
-h1{font-size:1.25rem;margin:0 0 8px;color:#e8d7b0}
-.sub,.hint{color:#cbbda6;margin:0 0 16px}
-.sheet{
-  background:var(--paper);
-  color:var(--ink);
-  border:1px solid #d8c7a8;
-  border-radius:6px;
-  padding:22px 20px 28px;
-  margin:0 0 28px;
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
-}
-.sheet h2{margin:0 0 6px;font-size:1.15rem;color:var(--gold);border-bottom:2px solid var(--gold);padding-bottom:6px}
+.wrap{max-width:880px;margin:0 auto;padding:16px 14px 100px}
+h1{font-size:1.2rem;margin:0 0 8px;color:#e8d7b0}
+.sub{color:#cbbda6;margin:0 0 16px}
+.sheet{background:var(--paper);color:var(--ink);border:1px solid #d8c7a8;border-radius:14px;padding:16px;margin:0 0 22px}
+.sheet h2{margin:0 0 10px;font-size:1.05rem;color:var(--gold)}
 .headrow{display:flex;gap:8px;align-items:center;margin-bottom:10px}
 .headrow input{flex:1}
 label{display:block;font-weight:800;font-size:.82rem;color:var(--gold);margin:10px 0 4px}
-input,textarea{
-  width:100%;
-  border:0;
-  border-bottom:1px dashed var(--line);
-  background:transparent;
-  color:var(--ink);
-  font:16px/1.8 Vazirmatn,Tahoma,sans-serif;
-  padding:6px 2px;
-  resize:vertical;
-}
-textarea{border:1px dashed var(--line);border-radius:4px;padding:8px;background:rgba(255,255,255,.35);min-height:72px}
+input,textarea{width:100%;border:1px dashed var(--line);border-radius:10px;background:rgba(255,255,255,.45);color:var(--ink);font:16px/1.8 Vazirmatn,Tahoma,sans-serif;padding:10px}
+textarea{resize:vertical;min-height:72px}
+#liveBox{min-height:180px;font-size:18px;background:#fff;border:2px solid var(--gold)}
+.recbar{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
+.recbtn{flex:0 0 auto;width:84px;height:84px;border-radius:50%;border:0;background:var(--red);color:#fff;font:800 16px Vazirmatn,sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(155,44,44,.35)}
+.recbtn.on{animation:pulse 1.2s infinite;background:#c0392b}
+@keyframes pulse{50%{transform:scale(1.06)}}
+.recmeta{flex:1}
+.mic{margin:0;color:var(--gold);font-weight:800;min-height:1.5em}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .del{background:transparent;border:1px solid var(--line);color:#7a3b2e;border-radius:8px;padding:6px 10px;font:700 13px Vazirmatn,sans-serif;cursor:pointer}
-.voice{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
-.voice button{font:700 13px Vazirmatn,sans-serif;background:#2a241c;color:#f6efe2;border:1px solid #5a4e3c;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer}
-.voice button.on{background:#5a2a24;border-color:#c45c4a}
-.mic{font-size:.85rem;color:#7a5c2e;margin:0 0 8px;min-height:1.4em}
-.paste{min-height:90px}
+.help{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}
+.help button{font:700 13px Vazirmatn,sans-serif;background:#2a241c;color:#f6efe2;border:1px solid #5a4e3c;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer}
 #wk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#14352e;color:#86e0a3;border:1px solid #86e0a3;padding:10px 18px;border-radius:12px;z-index:80;font:600 15px Vazirmatn,sans-serif;display:none;max-width:90%}
 @media(max-width:700px){.grid{grid-template-columns:1fr}}
-@media print{
-  body{background:#fff}
-  .toolbar,.hint,.voice,.mic,#wk-toast{display:none!important}
-  .wrap{max-width:none;padding:0}
-  .sheet{box-shadow:none;border:1px solid #b9a57e;border-radius:0;break-after:page;margin:0}
-  a{display:none}
-}
+@media print{.toolbar,.recbar,.help,.mic{display:none!important}}
 </style>
 </head>
 <body>
 <div class="toolbar">
   <a href="index.html">فهرست</a>
-  <a class="hidable" href="workshop-vaghee-form.html">کارگاه ستون‌ها</a>
-  <button type="button" id="btnAdd">واقعهٔ خالی</button>
-  <button class="hidable" type="button" id="btnSave">ذخیره</button>
-  <button class="hidable" type="button" id="btnPrint">چاپ یا پی‌دی‌اف</button>
-  <button class="hidable" type="button" id="btnTxt">خروجی متن</button>
-  <button type="button" id="btnHdr">پنهان هدر</button>
+  <button type="button" id="btnAdd">واقعهٔ تازه</button>
+  <button type="button" id="btnSave">ذخیره</button>
+  <button type="button" id="btnPrint">چاپ</button>
 </div>
 <div class="wrap">
-  <h1>فرم واقعه — نسخه هفت</h1>
-  <p class="sub">جعبهٔ بزرگ را بزن. روی کیبورد، دکمهٔ میکروفن را بزن. حرف بزن. متن همان‌جا و توی ستون واقعه می‌آید. دکمهٔ بگو لازم نیست.</p>
-  <p class="hint hidable">خانه‌ها: واقعه، نگاه، نقاب و نقش، الگو، دکان، ترس و مبادا، درون، سناریوها، جملهٔ ته.</p>
+  <h1>فرم واقعه — ضبط زنده</h1>
+  <p class="sub">دکمهٔ سرخ ضبط را بزن و حرف بزن. متن باید همان لحظه داخل ستون واقعه ظاهر شود. کیبورد لازم نیست. دوباره بزن تا بایستد.</p>
   <div id="list"></div>
 </div>
-<script src="workshop-sync.js?v=8"></script>
+<script src="workshop-sync.js?v=9"></script>
 <script>
 const LS = "form-vaghee-class-v1";
 const FIELDS = [
-  ["vaghee", "واقعه"],
   ["negah", "نگاه"],
   ["naqab", "نقاب و نقش"],
   ["olgo", "الگوی رفتاری"],
@@ -107,10 +76,10 @@ function toast(msg) {
   el.textContent = msg;
   el.style.display = "block";
   clearTimeout(el._t);
-  el._t = setTimeout(() => { el.style.display = "none"; }, 2400);
+  el._t = setTimeout(() => { el.style.display = "none"; }, 2200);
 }
 function blank() {
-  const o = { title: "", goft: "" };
+  const o = { title: "", goft: "", vaghee: "" };
   FIELDS.forEach(([k]) => { o[k] = ""; });
   return o;
 }
@@ -132,177 +101,9 @@ function el(tag, attrs, html) {
   return n;
 }
 let items = [];
-let rec = null;
-let recIndex = -1;
-let recFinal = "";
 const list = document.getElementById("list");
-
-function paint() {
-  list.innerHTML = "";
-  items.forEach((it, i) => {
-    const sheet = el("article", { class: "sheet", "data-i": String(i) });
-    const head = el("div", { class: "headrow" });
-    const t = el("input", { "data-k": "title", "data-i": String(i), placeholder: "عنوان واقعه" });
-    t.value = it.title || "";
-    const del = el("button", { type: "button", class: "del", "data-del": String(i) }, "حذف");
-    head.appendChild(t);
-    head.appendChild(del);
-    sheet.appendChild(el("h2", {}, "برگهٔ " + faNum(i + 1)));
-    sheet.appendChild(head);
-
-    const voice = el("div", { class: "voice" });
-    voice.appendChild(el("button", { type: "button", "data-speak": String(i) }, "بگو — تا وقتی دوباره بزنی"));
-    voice.appendChild(el("button", { type: "button", "data-stop": String(i) }, "تمام — بریز تو واقعه"));
-    voice.appendChild(el("button", { type: "button", "data-help": String(i) }, "پیشنهاد ستون‌ها"));
-    voice.appendChild(el("button", { type: "button", "data-copy": String(i) }, "کپی برای هوش مصنوعی"));
-    sheet.appendChild(voice);
-    sheet.appendChild(el("p", { class: "mic", "data-mic": String(i) }, it.goft ? "رونوشت ذخیره شده" : "بگو، بنویس، یا ضبط کن؛ متن می‌رود توی ستون واقعه"));
-    const goftBox = document.createElement("div");
-    goftBox.appendChild(el("label", {}, "این جعبه را بزن — بعد میکروفن کیبورد گوشی"));
-    const goftTa = document.createElement("textarea");
-    goftTa.dataset.k = "goft";
-    goftTa.dataset.i = String(i);
-    goftTa.rows = 8;
-    goftTa.style.minHeight = "160px";
-    goftTa.setAttribute("enterkeyhint", "done");
-    goftTa.setAttribute("lang", "fa");
-    goftTa.placeholder = "اینجا را لمس کن. میکروفن کیبورد را بزن. حرف بزن. تمام که شد کیبورد را ببند.";
-    goftTa.value = it.goft || it.vaghee || "";
-    goftBox.appendChild(goftTa);
-    sheet.appendChild(goftBox);
-
-    const grid = el("div", { class: "grid" });
-    FIELDS.forEach(([k, lab], idx) => {
-      const box = document.createElement("div");
-      if (idx === 0 || idx >= 7) box.style.gridColumn = "1 / -1";
-      box.appendChild(el("label", {}, k === "vaghee" ? "واقعه یا رونوشت" : lab));
-      const ta = document.createElement("textarea");
-      ta.dataset.k = k;
-      ta.dataset.i = String(i);
-      ta.rows = k === "vaghee" || k === "sen" ? 4 : 3;
-      ta.value = it[k] || "";
-      box.appendChild(ta);
-      grid.appendChild(box);
-    });
-    const extra = document.createElement("div");
-    extra.style.gridColumn = "1 / -1";
-    extra.appendChild(el("label", {}, "پاسخ هوش مصنوعی را اینجا بچسبان"));
-    extra.appendChild(el("textarea", { class: "paste", "data-paste": String(i), rows: "3", placeholder: "اگر پیشنهاد ابری کار نکرد، پاسخ را اینجا بگذار و بیرون بزن" }));
-    grid.appendChild(extra);
-    sheet.appendChild(grid);
-    list.appendChild(sheet);
-  });
-}
-function readDom() {
-  items.forEach((_, i) => {
-    const root = list.querySelector('.sheet[data-i="' + i + '"]');
-    if (!root) return;
-    root.querySelectorAll("[data-k]").forEach((n) => {
-      items[i][n.dataset.k] = n.value;
-    });
-  });
-}
-function aiPrompt(it) {
-  return [
-    "این یک واقعه است. حکم نده. فرض کارگاهی بده. ستون‌ها را با همین عنوان‌ها پر کن:",
-    "واقعه (فقط دوربین)",
-    "نگاه",
-    "نقاب و نقش",
-    "الگوی رفتاری",
-    "دکان",
-    "ترس و مبادا",
-    "تجربهٔ درونی",
-    "سناریوها",
-    "جملهٔ آزمایشی ته",
-    "",
-    "عنوان: " + (it.title || ""),
-    "متن یا رونوشت:",
-    it.vaghee || it.goft || ""
-  ].join("\n");
-}
-function applyFields(i, fields) {
-  if (!fields) return;
-  const map = {
-    title: "title",
-    vaghee: "vaghee",
-    negah: "negah",
-    naqab: "naqab",
-    olgo: "olgo",
-    dokon: "dokon",
-    tars: "tars",
-    darun: "darun",
-    sen: "sen",
-    jumle: "jumle",
-    "عنوان": "title",
-    "واقعه": "vaghee",
-    "نگاه": "negah",
-    "نقاب": "naqab",
-    "نقاب و نقش": "naqab",
-    "الگو": "olgo",
-    "الگوی رفتاری": "olgo",
-    "دکان": "dokon",
-    "ترس": "tars",
-    "ترس و مبادا": "tars",
-    "درون": "darun",
-    "تجربه درونی": "darun",
-    "تجربهٔ درونی": "darun",
-    "سناریوها": "sen",
-    "جمله": "jumle",
-    "جملهٔ آزمایشی ته": "jumle"
-  };
-  Object.keys(fields).forEach((k) => {
-    const dest = map[k] || (map[String(k).trim()] || "");
-    if (!dest) return;
-    const val = String(fields[k] || "").trim();
-    if (!val) return;
-    if (dest === "vaghee") putVaghee(i, val, true);
-    else if (!String(items[i][dest] || "").trim()) items[i][dest] = val;
-  });
-}
-function parsePasted(text) {
-  const out = {};
-  const labels = [
-    ["واقعه", "vaghee"],
-    ["نگاه", "negah"],
-    ["نقاب و نقش", "naqab"],
-    ["نقاب", "naqab"],
-    ["الگوی رفتاری", "olgo"],
-    ["الگو", "olgo"],
-    ["دکان", "dokon"],
-    ["ترس و مبادا", "tars"],
-    ["ترس", "tars"],
-    ["تجربهٔ درونی", "darun"],
-    ["درون", "darun"],
-    ["سناریوها", "sen"],
-    ["جملهٔ آزمایشی ته", "jumle"],
-    ["جمله", "jumle"],
-    ["عنوان", "title"]
-  ];
-  const lines = String(text || "").split(/\n+/);
-  let cur = null;
-  lines.forEach((ln) => {
-    const t = ln.trim();
-    let hit = null;
-    labels.forEach(([lab, key]) => {
-      if (t === lab || t.indexOf(lab + ":") === 0 || t.indexOf(lab + "：") === 0) hit = key;
-    });
-    if (hit) {
-      cur = hit;
-      const rest = t.replace(/^[^:：]+[:：]\s*/, "");
-      if (rest && rest !== t) out[cur] = (out[cur] ? out[cur] + "\n" : "") + rest;
-      return;
-    }
-    if (cur) out[cur] = (out[cur] ? out[cur] + "\n" : "") + t;
-  });
-  if (!Object.keys(out).length) out.vaghee = String(text || "").trim();
-  return out;
-}
-function setMic(i, msg) {
-  const eln = list.querySelector('[data-mic="' + i + '"]');
-  if (eln) eln.textContent = msg;
-}
+let recIndex = -1;
 let recording = false;
-let listenOn = false;
 let recCtx = null;
 let recProc = null;
 let recGain = null;
@@ -311,35 +112,97 @@ let recStream = null;
 let recPcm = [];
 let recRate = 16000;
 let recClock = 0;
+let recChunk = 0;
 let recStarted = 0;
-let recRms = 0;
-function isSafariApp() {
-  const ua = navigator.userAgent || "";
-  const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome|Chromium|Android/.test(ua);
-  return iOS || safari;
+let recBusy = false;
+let rec = null;
+let listenOn = false;
+let recFinal = "";
+
+function paint() {
+  const keep = recIndex;
+  const was = recording;
+  list.innerHTML = "";
+  items.forEach((it, i) => {
+    const sheet = el("article", { class: "sheet", "data-i": String(i) });
+    const head = el("div", { class: "headrow" });
+    const t = el("input", { "data-k": "title", "data-i": String(i), placeholder: "عنوان اختیاری" });
+    t.value = it.title || "";
+    head.appendChild(t);
+    head.appendChild(el("button", { type: "button", class: "del", "data-del": String(i) }, "حذف"));
+    sheet.appendChild(el("h2", {}, "برگهٔ " + faNum(i + 1)));
+    sheet.appendChild(head);
+
+    const recbar = el("div", { class: "recbar" });
+    const btn = el("button", { type: "button", class: "recbtn", "data-rec": String(i) }, "ضبط");
+    const meta = el("div", { class: "recmeta" });
+    meta.appendChild(el("p", { class: "mic", "data-mic": String(i) }, "ضبط را بزن و حرف بزن"));
+    recbar.appendChild(btn);
+    recbar.appendChild(meta);
+    sheet.appendChild(recbar);
+
+    sheet.appendChild(el("label", {}, "واقعه — متن زنده"));
+    const live = el("textarea", { id: i === 0 ? "liveBox" : "", "data-k": "vaghee", "data-i": String(i) });
+    if (i === 0) live.id = "liveBox";
+    live.rows = 8;
+    live.placeholder = "اینجا باید همان لحظه که حرف می‌زنی پر شود";
+    live.value = it.vaghee || it.goft || "";
+    sheet.appendChild(live);
+
+    const grid = el("div", { class: "grid" });
+    FIELDS.forEach(([k, lab], idx) => {
+      const box = document.createElement("div");
+      if (idx >= 6) box.style.gridColumn = "1 / -1";
+      box.appendChild(el("label", {}, lab));
+      const ta = document.createElement("textarea");
+      ta.dataset.k = k;
+      ta.dataset.i = String(i);
+      ta.rows = k === "sen" ? 3 : 2;
+      ta.value = it[k] || "";
+      box.appendChild(ta);
+      grid.appendChild(box);
+    });
+    sheet.appendChild(grid);
+    const help = el("div", { class: "help" });
+    help.appendChild(el("button", { type: "button", "data-help": String(i) }, "پیشنهاد بقیهٔ ستون‌ها"));
+    sheet.appendChild(help);
+    list.appendChild(sheet);
+  });
+  if (was && keep >= 0) {
+    const b = list.querySelector('[data-rec="' + keep + '"]');
+    if (b) {
+      b.classList.add("on");
+      b.textContent = "بایست";
+    }
+  }
 }
-function Speech() {
-  return window.SpeechRecognition || window.webkitSpeechRecognition;
+function readDom() {
+  items.forEach((_, i) => {
+    const root = list.querySelector('.sheet[data-i="' + i + '"]');
+    if (!root) return;
+    root.querySelectorAll("[data-k]").forEach((n) => {
+      items[i][n.dataset.k] = n.value;
+    });
+    items[i].goft = items[i].vaghee || "";
+  });
+}
+function setMic(i, msg) {
+  const n = list.querySelector('[data-mic="' + i + '"]');
+  if (n) n.textContent = msg;
 }
 function putVaghee(i, text, append) {
   const add = String(text || "").trim();
   if (!add) return;
-  const cur = String(items[i].vaghee || items[i].goft || "").trim();
+  const cur = String(items[i].vaghee || "").trim();
   let t = add;
   if (append && cur) {
     if (cur.indexOf(add) !== -1) t = cur;
     else t = cur + (/\s$/.test(cur) ? "" : " ") + add;
   }
-  items[i].goft = t;
   items[i].vaghee = t;
-  const root = list.querySelector('.sheet[data-i="' + i + '"]');
-  if (root) {
-    const g = root.querySelector('textarea[data-k="goft"]');
-    const v = root.querySelector('textarea[data-k="vaghee"]');
-    if (g) g.value = t;
-    if (v) v.value = t;
-  }
+  items[i].goft = t;
+  const v = list.querySelector('.sheet[data-i="' + i + '"] textarea[data-k="vaghee"]');
+  if (v) v.value = t;
   save(items);
 }
 function blobB64(blob) {
@@ -349,9 +212,6 @@ function blobB64(blob) {
     fr.onerror = reject;
     fr.readAsDataURL(blob);
   });
-}
-function speakBtn(i) {
-  return list.querySelector('[data-speak="' + i + '"]');
 }
 function pcmToWav(chunks, sampleRate) {
   let total = 0;
@@ -389,41 +249,20 @@ function pcmToWav(chunks, sampleRate) {
   new Uint8Array(buf, 44).set(new Uint8Array(pcm.buffer));
   return new Blob([buf], { type: "audio/wav" });
 }
-function stopDictation() {
-  listenOn = false;
-  try { if (rec) rec.stop(); } catch (e) {}
-  rec = null;
+function Speech() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition;
 }
-function stopCapture() {
-  clearInterval(recClock);
-  stopDictation();
-  try { if (recProc) recProc.disconnect(); } catch (e) {}
-  try { if (recSrc) recSrc.disconnect(); } catch (e) {}
-  try { if (recGain) recGain.disconnect(); } catch (e) {}
-  try { if (recCtx && recCtx.state !== "closed") recCtx.close(); } catch (e) {}
-  if (recStream) recStream.getTracks().forEach((t) => t.stop());
-  recProc = recSrc = recGain = recCtx = recStream = null;
-  recording = false;
-}
-function markBtn(i, on) {
-  const b = speakBtn(i);
-  if (!b) return;
-  b.classList.toggle("on", !!on);
-  b.textContent = on ? "در حال شنیدن — بزن تا تمام شود" : "بگو — تا وقتی دوباره بزنی";
-}
-function startDictationLoop(i) {
+function startDictation(i) {
   const Rec = Speech();
-  if (!Rec) return false;
+  if (!Rec) return;
   listenOn = true;
-  recIndex = i;
-  recFinal = items[i].goft || items[i].vaghee || "";
+  recFinal = items[i].vaghee || "";
   function arm() {
     if (!listenOn || recIndex !== i) return;
     const r = new Rec();
     r.lang = "fa-IR";
     r.continuous = true;
     r.interimResults = true;
-    r.maxAlternatives = 1;
     r.onresult = function (ev) {
       let inter = "";
       for (let n = ev.resultIndex; n < ev.results.length; n++) {
@@ -433,88 +272,122 @@ function startDictationLoop(i) {
       }
       const shown = (recFinal + (inter ? " " + inter : "")).trim();
       if (shown) putVaghee(i, shown);
-      setMic(i, "متن زنده می‌آید — تمام که شد همان دکمه را بزن");
     };
-    r.onerror = function (ev) {
-      const err = ev && ev.error;
-      if (err === "not-allowed") {
-        listenOn = false;
-        setMic(i, "میکروفن بسته است");
-        toast("در تنظیمات سافاری میکروفن را اجازه بده");
-      }
-    };
+    r.onerror = function () {};
     r.onend = function () {
       rec = null;
-      if (listenOn && recIndex === i) setTimeout(arm, 60);
+      if (listenOn && recIndex === i) setTimeout(arm, 80);
     };
-    try {
-      r.start();
-      rec = r;
-    } catch (e) {
-      setTimeout(arm, 280);
-    }
+    try { r.start(); rec = r; } catch (e) { setTimeout(arm, 300); }
   }
   arm();
-  return true;
 }
-function startTalk(i, btn) {
+async function flushChunk(i, last) {
+  if (recBusy) return;
+  const keep = last ? 0 : Math.max(1, Math.ceil((recRate * 0.3) / 4096));
+  const chunks = recPcm.slice();
+  if (!chunks.length) return;
+  recPcm = keep ? recPcm.slice(-keep) : [];
+  const wav = pcmToWav(chunks, recRate);
+  if (wav.size < 1200) return;
+  recBusy = true;
+  setMic(i, "دارم همین الان می‌نویسم…");
+  try {
+    const r = await KargahSync.transcribe(await blobB64(wav), "audio/wav");
+    const tx = (r && r.text) || "";
+    if (tx) {
+      putVaghee(i, tx, true);
+      setMic(i, "در واقعه نوشته شد — ادامه بده");
+    }
+  } catch (e) {}
+  recBusy = false;
+}
+function stopCapture() {
+  listenOn = false;
+  clearInterval(recClock);
+  clearInterval(recChunk);
+  try { if (rec) rec.stop(); } catch (e) {}
+  rec = null;
+  try { if (recProc) recProc.disconnect(); } catch (e) {}
+  try { if (recSrc) recSrc.disconnect(); } catch (e) {}
+  try { if (recGain) recGain.disconnect(); } catch (e) {}
+  try { if (recCtx && recCtx.state !== "closed") recCtx.close(); } catch (e) {}
+  if (recStream) recStream.getTracks().forEach((t) => t.stop());
+  recProc = recSrc = recGain = recCtx = recStream = null;
+  recording = false;
+}
+function markRec(i, on) {
+  const b = list.querySelector('[data-rec="' + i + '"]');
+  if (!b) return;
+  b.classList.toggle("on", !!on);
+  b.textContent = on ? "بایست" : "ضبط";
+}
+async function startRec(i) {
   if (recording && recIndex === i) {
-    finishTalk(i);
+    await stopRec(i);
     return;
   }
-  if (recording) finishTalk(recIndex);
-  recIndex = i;
-  recording = true;
+  if (recording) await stopRec(recIndex);
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    toast("میکروفن این مرورگر بسته است");
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true } });
+  } catch (e) {
+    toast("اجازهٔ میکروفن را بده");
+    return;
+  }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  recCtx = new AC();
+  if (recCtx.state === "suspended") await recCtx.resume();
+  recRate = recCtx.sampleRate || 44100;
+  recStream = stream;
+  recSrc = recCtx.createMediaStreamSource(stream);
+  recProc = recCtx.createScriptProcessor(4096, 1, 1);
+  recGain = recCtx.createGain();
+  recGain.gain.value = 0;
   recPcm = [];
+  recProc.onaudioprocess = function (ev) {
+    if (!recording) return;
+    recPcm.push(new Float32Array(ev.inputBuffer.getChannelData(0)));
+  };
+  recSrc.connect(recProc);
+  recProc.connect(recGain);
+  recGain.connect(recCtx.destination);
+  recording = true;
+  recIndex = i;
   recStarted = Date.now();
-  recFinal = items[i].goft || items[i].vaghee || "";
-  markBtn(i, true);
-  const dict = startDictationLoop(i);
+  markRec(i, true);
+  startDictation(i);
   recClock = setInterval(function () {
     const s = Math.floor((Date.now() - recStarted) / 1000);
     const has = String(items[i].vaghee || "").trim();
-    setMic(i, "شنیدن " + faNum(s) + " ثانیه" + (has ? " — متن در واقعه است" : " — حرف بزن") + " — تمام را بزن");
-  }, 300);
-  if (dict) {
-    setMic(i, "دیکته روشن شد — فارسی بگو؛ متن همان‌جا می‌آید");
-    toast("بگو. متن باید همان موقع در واقعه ظاهر شود");
-  } else {
-    setMic(i, "دیکته در این مرورگر نیست — در جعبه بنویس");
-    toast("در سافاری دیکته نیست؛ در جعبهٔ رونوشت بنویس");
-  }
-  if (btn) btn.classList.add("on");
+    setMic(i, "ضبط " + faNum(s) + " ثانیه" + (has ? " — متن در واقعه است" : " — چند ثانیه صبر کن تا بنویسد"));
+  }, 400);
+  recChunk = setInterval(function () { flushChunk(i, false); }, 4000);
+  setMic(i, "ضبط روشن است. حرف بزن");
+  toast("ضبط روشن شد");
 }
-function finishTalk(i) {
-  if (i == null) i = recIndex;
-  const had = String((items[i] && (items[i].vaghee || items[i].goft)) || recFinal || "").trim();
+async function stopRec(i) {
+  const leftover = recPcm.slice();
+  const rate = recRate;
   stopCapture();
-  markBtn(i, false);
-  if (had) {
-    putVaghee(i, had);
-    setMic(i, "متن در ستون واقعه است");
-    toast("متن ذخیره شد");
-    return;
+  markRec(i, false);
+  if (leftover.length) {
+    recPcm = leftover;
+    recRate = rate;
+    await flushChunk(i, true);
+    recPcm = [];
   }
-  setMic(i, "متنی نیامد — کیبورد فارسی را روشن کن و دوباره بگو، یا در جعبه بنویس");
-  toast("متنی نیامد. کیبورد فارسی روشن باشد");
+  const has = String(items[i].vaghee || "").trim();
+  setMic(i, has ? "متن در ستون واقعه است" : "متنی نیامد — دوباره ضبط کن یا بنویس");
+  toast(has ? "متن ذخیره شد" : "متنی نیامد");
 }
-list.addEventListener("input", (e) => {
-  readDom();
-  const k = e.target && e.target.dataset && e.target.dataset.k;
-  const i = e.target && e.target.dataset ? +e.target.dataset.i : -1;
-  if (k === "goft" && i >= 0) {
-    items[i].vaghee = e.target.value;
-    const v = list.querySelector('.sheet[data-i="' + i + '"] textarea[data-k="vaghee"]');
-    if (v) v.value = e.target.value;
-  }
-  if (k === "vaghee" && i >= 0 && !String(items[i].goft || "").trim()) {
-    items[i].goft = e.target.value;
-    const g = list.querySelector('.sheet[data-i="' + i + '"] textarea[data-k="goft"]');
-    if (g) g.value = e.target.value;
-  }
-  save(items);
-});
-list.addEventListener("click", async (e) => {
+
+list.addEventListener("input", function () { readDom(); save(items); });
+list.addEventListener("click", async function (e) {
   const del = e.target.closest("[data-del]");
   if (del) {
     readDom();
@@ -524,27 +397,9 @@ list.addEventListener("click", async (e) => {
     paint();
     return;
   }
-  const speak = e.target.closest("[data-speak]");
-  if (speak) {
-    const i = +speak.dataset.speak;
-    if (recording && recIndex === i) {
-      finishTalk(i);
-      return;
-    }
-    startTalk(i, speak);
-    return;
-  }
-  const stop = e.target.closest("[data-stop]");
-  if (stop) {
-    finishTalk(+stop.dataset.stop);
-    return;
-  }
-  const copyb = e.target.closest("[data-copy]");
-  if (copyb) {
-    readDom();
-    const i = +copyb.dataset.copy;
-    const txt = aiPrompt(items[i]);
-    navigator.clipboard.writeText(txt).then(() => toast("متن برای هوش مصنوعی کپی شد"), () => prompt("کپی کن", txt));
+  const recb = e.target.closest("[data-rec]");
+  if (recb) {
+    await startRec(+recb.dataset.rec);
     return;
   }
   const helpb = e.target.closest("[data-help]");
@@ -552,87 +407,43 @@ list.addEventListener("click", async (e) => {
     readDom();
     const i = +helpb.dataset.help;
     const it = items[i];
-    if (!String(it.vaghee || it.goft || "").trim()) {
-      toast("اول در جعبهٔ رونوشت یا واقعه بنویس");
+    if (!String(it.vaghee || "").trim()) {
+      toast("اول ضبط کن یا واقعه را بنویس");
       return;
     }
     helpb.disabled = true;
-    setMic(i, "پیشنهاد ستون‌ها…");
     try {
       const r = await KargahSync.helpFill({
         title: it.title || "",
-        vaghee: it.vaghee || it.goft || "",
-        transcript: it.goft || it.vaghee || "",
-        negah: it.negah || "",
-        naqab: it.naqab || "",
-        olgo: it.olgo || "",
-        dokon: it.dokon || "",
-        tars: it.tars || "",
-        darun: it.darun || "",
-        sen: it.sen || "",
-        jumle: it.jumle || ""
+        vaghee: it.vaghee || "",
+        transcript: it.vaghee || ""
       });
-      applyFields(i, r.fields || r);
+      const f = r.fields || r;
+      ["negah", "naqab", "olgo", "dokon", "tars", "darun", "sen", "jumle"].forEach((k) => {
+        if (f[k] && !String(items[i][k] || "").trim()) items[i][k] = String(f[k]);
+      });
       save(items);
       paint();
-      toast("ستون‌ها پیشنهاد شد — هر سطر را که نمی‌خواند خط بزن");
+      toast("ستون‌ها پر شد");
     } catch (err) {
-      const txt = aiPrompt(it);
-      navigator.clipboard.writeText(txt).then(() => toast("ابر کمکی نشد؛ متن کپی شد تا خودت به هوش مصنوعی بدهی"), () => prompt("کپی کن", txt));
+      toast("پیشنهاد نیامد — متن واقعه را کپی کن");
     }
     helpb.disabled = false;
   }
 });
-list.addEventListener("focusout", (e) => {
-  const p = e.target.closest("[data-paste]");
-  if (!p) return;
-  const txt = p.value.trim();
-  if (!txt) return;
-  const i = +p.dataset.paste;
-  applyFields(i, parsePasted(txt));
-  p.value = "";
-  save(items);
-  paint();
-  toast("از متن چسبانده‌شده پر شد");
-});
-document.getElementById("btnAdd").onclick = () => {
+document.getElementById("btnAdd").onclick = function () {
   readDom();
   items.push(blank());
   save(items);
   paint();
-  window.scrollTo(0, document.body.scrollHeight);
 };
-document.getElementById("btnSave").onclick = () => { readDom(); save(items); toast("ذخیره شد"); };
-document.getElementById("btnPrint").onclick = () => { readDom(); save(items); window.print(); };
-document.getElementById("btnTxt").onclick = () => {
-  readDom();
-  save(items);
-  let out = "فرم واقعه\n" + new Date().toLocaleString("fa-IR") + "\n\n";
-  items.forEach((it, i) => {
-    out += "—— " + (it.title || ("واقعه " + (i + 1))) + " ——\n";
-    if (it.goft) out += "رونوشت:\n" + it.goft + "\n\n";
-    FIELDS.forEach(([k, lab]) => { out += lab + ":\n" + (it[k] || "—") + "\n\n"; });
-  });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([out], { type: "text/plain;charset=utf-8" }));
-  a.download = "form-vaghee.txt";
-  a.click();
-};
+document.getElementById("btnSave").onclick = function () { readDom(); save(items); toast("ذخیره شد"); };
+document.getElementById("btnPrint").onclick = function () { readDom(); save(items); window.print(); };
 
-function applyHdr(off) {
-  document.documentElement.classList.toggle("hdr-off", !!off);
-  try { localStorage.setItem("kargah-hdr-off", off ? "1" : "0"); } catch (e) {}
-  const b = document.getElementById("btnHdr");
-  if (b) b.textContent = off ? "نمایش هدر" : "پنهان هدر";
-}
-document.getElementById("btnHdr").onclick = () => {
-  applyHdr(!document.documentElement.classList.contains("hdr-off"));
-};
 async function start() {
   try { if (window.KargahSync) await KargahSync.boot(); } catch (e) {}
   items = load();
   paint();
-  try { applyHdr(localStorage.getItem("kargah-hdr-off") === "1"); } catch (e) {}
 }
 start();
 </script>
