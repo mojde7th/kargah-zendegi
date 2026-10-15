@@ -62,7 +62,11 @@ window.WorkshopReadkit = function (cfg) {
       ".flag input{width:22px;height:22px;accent-color:#86e0a3}\n" +
       ".flag:has(input:checked){border-color:#86e0a3;background:#14352e;color:#86e0a3}\n" +
       "#toc a.done{color:#86e0a3}\n" +
-      "#toc a.done::before{content:'✓ ';color:#86e0a3}\n";
+      "#toc a.done::before{content:'✓ ';color:#86e0a3}\n" +
+      "html.hdr-off{--hdr:56px}\n" +
+      "html.hdr-off .freeze .widgets,html.hdr-off .freeze .hint{display:none!important}\n" +
+      "html.hdr-off .freeze{padding:6px 10px}\n" +
+      "#btnHdr{margin-right:auto}\n";
     document.head.appendChild(style);
   }
 
@@ -177,7 +181,8 @@ window.WorkshopReadkit = function (cfg) {
         "> خواندم — این صفحه سبز شود</label>";
     });
     const bar = $("#progBar");
-    const pct = N ? Math.round((n / N) * 100) : 0;
+    const reached = Math.min(N, Math.max(n, (s.page || 0) + 1));
+    const pct = N ? Math.round((reached / N) * 100) : 0;
     if (bar) bar.style.width = pct + "%";
     const wPct = $("#wPct");
     if (wPct) wPct.textContent = faNum(pct) + "٪";
@@ -310,7 +315,33 @@ window.WorkshopReadkit = function (cfg) {
       });
     });
 
+  function applyHdr(off) {
+    document.documentElement.classList.toggle("hdr-off", !!off);
+    try {
+      localStorage.setItem("kargah-hdr-off", off ? "1" : "0");
+    } catch (e) {}
+    const b = document.getElementById("btnHdr");
+    if (b) b.textContent = off ? "نمایش هدر" : "پنهان هدر";
+  }
+  function setupHdr() {
+    const row = document.querySelector(".freeze .row");
+    if (row && !document.getElementById("btnHdr")) {
+      const b = document.createElement("button");
+      b.id = "btnHdr";
+      b.type = "button";
+      b.textContent = "پنهان هدر";
+      row.appendChild(b);
+      b.onclick = () => applyHdr(!document.documentElement.classList.contains("hdr-off"));
+    }
+    let off = false;
+    try {
+      off = localStorage.getItem("kargah-hdr-off") === "1";
+    } catch (e) {}
+    applyHdr(off);
+  }
+
   function start() {
+    setupHdr();
     paint();
     go(st().page);
   }

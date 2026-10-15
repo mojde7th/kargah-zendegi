@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
 body{margin:0;padding:28px 16px 80px;background:#0a0e14;color:#eef4fa;font:18px/1.85 Vazirmatn,Tahoma,sans-serif}
+html.hdr-off .hidable{display:none}
 h1{color:#7dd3c7;font-size:1.35rem;margin:0 0 8px}
 .sub{color:#9bb0c3;margin:0 0 18px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
@@ -33,11 +34,14 @@ code{direction:ltr;display:inline-block;unicode-bidi:isolate}
 </head>
 <body>
 <h1>فهرست کارگاه و سبک زندگی</h1>
-<p class="sub">تیک هر صفحه سبز می‌ماند. درصد خوانده‌شده اینجاست. با کد همگام، لپ‌تاپ و گوشی یکی می‌شوند.</p>
+<p class="sub hidable">یک کارگاه ۱۶۲ صفحه‌ای. درصد از صفحهٔ فعلی و تیک‌هاست. هر بار باز شود از ابر خوانده می‌شود.</p>
+<div class="bar">
+  <button type="button" id="btnHdr">پنهان هدر</button>
+</div>
 
-<div class="sync">
-  <h2>همگام بین دستگاه‌ها</h2>
-  <p>یک‌بار «ساخت کد» بزن. همان لینک را روی گوشی باز کن. کد را به همکلاسی نده؛ هر کس کد خودش را بسازد.</p>
+<div class="sync hidable">
+  <h2>همگام ابری</h2>
+  <p>خودکار به ابر وصل می‌شود. لازم نیست هر بار کد بسازی. اگر دستگاه تازه است و خالی می‌بینی، کمی صبر کن یا «تازه‌کردن از ابر» را بزن.</p>
   <p>وضعیت: <span id="syncState">هنوز وصل نیست</span></p>
   <div class="bar">
     <button type="button" id="btnMake">ساخت کد همگام</button>
@@ -64,8 +68,7 @@ code{direction:ltr;display:inline-block;unicode-bidi:isolate}
   <button type="button" id="btnExport">دانلود وضعیت</button>
 </div>
 <div id="list"></div>
-<p class="note">فرم خالی برای تو و همکلاسی‌هاست. نوشته‌های شخصی جلسهٔ قبلی در این فهرست نیست.</p>
-<p class="note">نسخه‌های قدیمی روی آدرس جدا مانده‌اند؛ تیک‌شان مال همان سایت است.</p>
+<p class="note hidable">فرم خالی برای تو و همکلاسی‌هاست. کارگاه ۱۶۲ صفحه‌ای یکی است؛ تیک نسخه‌های قبلی داخل همین یکی جمع می‌شود.</p>
 <script src="workshop-sync.js"></script>
 <script>
 const GUIDES = [
@@ -104,24 +107,6 @@ const GUIDES = [
     kind: "form",
     updated: "2026-10-15",
     blurb: "برای تو و کلاس. تایپ یا ضبط صدا، رونوشت، پیشنهاد ستون‌ها"
-  },
-  {
-    id: "personal-os-kamel-v2",
-    title: "نسخه کامل قبلی — آدرس جدا",
-    href: "https://mojde7th.github.io/lifestyle-os-kamel/workshop-personal-os.html",
-    pages: 162,
-    kind: "external",
-    updated: "2026-10-14",
-    blurb: "ریپوی قبلی؛ تیک آنجا جداست"
-  },
-  {
-    id: "personal-os-recomp-v1",
-    title: "نسخه کوتاه قبلی — آدرس جدا",
-    href: "https://mojde7th.github.io/lifestyle-os/",
-    pages: 44,
-    kind: "external",
-    updated: "2026-10-14",
-    blurb: "ریپوی اول؛ اینجا عوض نمی‌شود"
   }
 ];
 
@@ -140,11 +125,13 @@ function readState(g) {
     let n = 0;
     Object.keys(done).forEach((k) => { if (done[k]) n++; });
     const pages = g.pages || 1;
+    const page = (s.page || 0) + 1;
+    const reached = Math.min(pages, Math.max(n, page));
     return {
       done: n,
-      page: (s.page || 0) + 1,
+      page: page,
       hasNotes: !!(s.notes && Object.keys(s.notes).some((k) => s.notes[k])),
-      pct: Math.round((n / pages) * 100)
+      pct: Math.round((reached / pages) * 100)
     };
   } catch (e) {
     return { done: 0, page: g.kind === "form" ? 0 : 1, hasNotes: false, pct: 0 };
@@ -246,7 +233,17 @@ document.getElementById("btnJoin").onclick = async () => {
   }
 };
 
+function applyHdr(off) {
+  document.documentElement.classList.toggle("hdr-off", !!off);
+  try { localStorage.setItem("kargah-hdr-off", off ? "1" : "0"); } catch (e) {}
+  const b = document.getElementById("btnHdr");
+  if (b) b.textContent = off ? "نمایش هدر" : "پنهان هدر";
+}
+document.getElementById("btnHdr").onclick = () => {
+  applyHdr(!document.documentElement.classList.contains("hdr-off"));
+};
 function startUi() {
+  try { applyHdr(localStorage.getItem("kargah-hdr-off") === "1"); } catch (e) {}
   paintSync();
   paint();
 }

@@ -15,6 +15,7 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--screen);color:var(--paper);font:16px/1.85 Vazirmatn,Tahoma,sans-serif}
+html.hdr-off .toolbar .hidable{display:none}
 .toolbar{position:sticky;top:0;z-index:20;background:#14110d;border-bottom:1px solid #3a3328;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .toolbar a,.toolbar button{font:700 14px Vazirmatn,sans-serif;background:#2a241c;color:var(--paper);border:1px solid #5a4e3c;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer;text-decoration:none}
 .wrap{max-width:880px;margin:0 auto;padding:18px 14px 80px}
@@ -65,16 +66,17 @@ textarea{border:1px dashed var(--line);border-radius:4px;padding:8px;background:
 <body>
 <div class="toolbar">
   <a href="index.html">فهرست</a>
-  <a href="workshop-vaghee-form.html">کارگاه ستون‌ها</a>
+  <a class="hidable" href="workshop-vaghee-form.html">کارگاه ستون‌ها</a>
   <button type="button" id="btnAdd">واقعهٔ خالی</button>
-  <button type="button" id="btnSave">ذخیره</button>
-  <button type="button" id="btnPrint">چاپ یا پی‌دی‌اف</button>
-  <button type="button" id="btnTxt">خروجی متن</button>
+  <button class="hidable" type="button" id="btnSave">ذخیره</button>
+  <button class="hidable" type="button" id="btnPrint">چاپ یا پی‌دی‌اف</button>
+  <button class="hidable" type="button" id="btnTxt">خروجی متن</button>
+  <button type="button" id="btnHdr">پنهان هدر</button>
 </div>
 <div class="wrap">
   <h1>فرم خالی واقعه</h1>
-  <p class="sub">برای تو و همکلاسی. تایپ کن یا بگو. رونوشت ساخته می‌شود. بعد می‌توانی پیشنهاد ستون‌ها را بگیری یا متن را برای هوش مصنوعی کپی کنی.</p>
-  <p class="hint">خانه‌ها: واقعه، نگاه، نقاب و نقش، الگو، دکان، ترس و مبادا، درون، سناریوها، جملهٔ ته. ذخیره در همین مرورگر است؛ با کد همگام فهرست به گوشی هم می‌رود.</p>
+  <p class="sub hidable">رونوشت را همین‌جا بنویس یا بگو؛ مستقیم می‌رود توی ستون واقعه. پیشرفت روی ابر ذخیره می‌شود.</p>
+  <p class="hint hidable">خانه‌ها: واقعه، نگاه، نقاب و نقش، الگو، دکان، ترس و مبادا، درون، سناریوها، جملهٔ ته.</p>
   <div id="list"></div>
 </div>
 <script src="workshop-sync.js"></script>
@@ -154,13 +156,23 @@ function paint() {
     voice.appendChild(el("button", { type: "button", "data-help": String(i) }, "پیشنهاد ستون‌ها"));
     voice.appendChild(el("button", { type: "button", "data-copy": String(i) }, "کپی برای هوش مصنوعی"));
     sheet.appendChild(voice);
-    sheet.appendChild(el("p", { class: "mic", "data-mic": String(i) }, it.goft ? "رونوشت ذخیره شده" : "می‌توانی بگویی یا بنویسی"));
+    sheet.appendChild(el("p", { class: "mic", "data-mic": String(i) }, it.goft ? "رونوشت ذخیره شده" : "بگو، بنویس، یا ضبط کن؛ متن می‌رود توی ستون واقعه"));
+    const goftBox = document.createElement("div");
+    goftBox.appendChild(el("label", {}, "رونوشت — اینجا بنویس تا برود توی واقعه"));
+    const goftTa = document.createElement("textarea");
+    goftTa.dataset.k = "goft";
+    goftTa.dataset.i = String(i);
+    goftTa.rows = 4;
+    goftTa.placeholder = "هرچه گفتی یا نوشتی همین‌جا";
+    goftTa.value = it.goft || it.vaghee || "";
+    goftBox.appendChild(goftTa);
+    sheet.appendChild(goftBox);
 
     const grid = el("div", { class: "grid" });
     FIELDS.forEach(([k, lab], idx) => {
       const box = document.createElement("div");
       if (idx === 0 || idx >= 7) box.style.gridColumn = "1 / -1";
-      box.appendChild(el("label", {}, lab));
+      box.appendChild(el("label", {}, k === "vaghee" ? "واقعه یا رونوشت" : lab));
       const ta = document.createElement("textarea");
       ta.dataset.k = k;
       ta.dataset.i = String(i);
@@ -246,6 +258,7 @@ function parsePasted(text) {
     }
     if (cur) out[cur] = (out[cur] ? out[cur] + "\n" : "") + t;
   });
+  if (!Object.keys(out).length) out.vaghee = String(text || "").trim();
   return out;
 }
 function Speech() {
@@ -255,12 +268,50 @@ function setMic(i, msg) {
   const eln = list.querySelector('[data-mic="' + i + '"]');
   if (eln) eln.textContent = msg;
 }
+let listenOn = false;
 function stopSpeech() {
+  listenOn = false;
   try { if (rec) rec.stop(); } catch (e) {}
   rec = null;
   recIndex = -1;
 }
-list.addEventListener("input", () => { readDom(); save(items); });
+function putVaghee(i, text) {
+  const t = String(text || "").trim();
+  items[i].goft = t;
+  items[i].vaghee = t;
+  const root = list.querySelector('.sheet[data-i="' + i + '"]');
+  if (root) {
+    const g = root.querySelector('textarea[data-k="goft"]');
+    const v = root.querySelector('textarea[data-k="vaghee"]');
+    if (g) g.value = t;
+    if (v) v.value = t;
+  }
+  save(items);
+}
+function blobB64(blob) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result || ""));
+    fr.onerror = reject;
+    fr.readAsDataURL(blob);
+  });
+}
+list.addEventListener("input", (e) => {
+  readDom();
+  const k = e.target && e.target.dataset && e.target.dataset.k;
+  const i = e.target && e.target.dataset ? +e.target.dataset.i : -1;
+  if (k === "goft" && i >= 0) {
+    items[i].vaghee = e.target.value;
+    const v = list.querySelector('.sheet[data-i="' + i + '"] textarea[data-k="vaghee"]');
+    if (v) v.value = e.target.value;
+  }
+  if (k === "vaghee" && i >= 0 && !String(items[i].goft || "").trim()) {
+    items[i].goft = e.target.value;
+    const g = list.querySelector('.sheet[data-i="' + i + '"] textarea[data-k="goft"]');
+    if (g) g.value = e.target.value;
+  }
+  save(items);
+});
 list.addEventListener("click", async (e) => {
   const del = e.target.closest("[data-del]");
   if (del) {
@@ -277,7 +328,8 @@ list.addEventListener("click", async (e) => {
     if (!Rec) { toast("گفتار روی این مرورگر نیست؛ کروم یا اج را باز کن"); return; }
     stopSpeech();
     recIndex = +speak.dataset.speak;
-    recFinal = items[recIndex].vaghee || "";
+    recFinal = items[recIndex].goft || items[recIndex].vaghee || "";
+    listenOn = true;
     rec = new Rec();
     rec.lang = "fa-IR";
     rec.continuous = true;
@@ -290,25 +342,34 @@ list.addEventListener("click", async (e) => {
         if (ev.results[n].isFinal) recFinal += (recFinal && !/\s$/.test(recFinal) ? " " : "") + tx;
         else inter += tx;
       }
-      items[recIndex].vaghee = (recFinal + (inter ? " " + inter : "")).trim();
+      const shown = (recFinal + (inter ? " " + inter : "")).trim();
+      items[recIndex].vaghee = shown;
       items[recIndex].goft = recFinal;
-      const ta = list.querySelector('.sheet[data-i="' + recIndex + '"] textarea[data-k="vaghee"]');
-      if (ta) ta.value = items[recIndex].vaghee;
+      const root = list.querySelector('.sheet[data-i="' + recIndex + '"]');
+      if (root) {
+        const v = root.querySelector('textarea[data-k="vaghee"]');
+        const g = root.querySelector('textarea[data-k="goft"]');
+        if (v) v.value = shown;
+        if (g) g.value = shown;
+      }
       setMic(recIndex, "در حال شنیدن…");
     };
     rec.onend = () => {
+      if (listenOn) {
+        try { rec.start(); } catch (err) { listenOn = false; }
+        return;
+      }
       speak.classList.remove("on");
       if (items[recIndex]) {
-        items[recIndex].vaghee = recFinal.trim();
-        items[recIndex].goft = recFinal.trim();
-        save(items);
-        setMic(recIndex, recFinal ? "رونوشت ذخیره شد" : "چیزی شنیده نشد");
+        putVaghee(recIndex, recFinal);
+        setMic(recIndex, recFinal ? "رونوشت رفت توی ستون واقعه" : "چیزی شنیده نشد؛ در جعبهٔ رونوشت بنویس");
       }
       rec = null;
     };
     rec.onerror = () => {
-      setMic(recIndex, "گفتار قطع شد");
+      setMic(recIndex, "گفتار قطع شد — متن را در جعبهٔ رونوشت بنویس");
       speak.classList.remove("on");
+      listenOn = false;
     };
     rec.start();
     setMic(recIndex, "گوش می‌دهد — فارسی بگو");
@@ -329,14 +390,29 @@ list.addEventListener("click", async (e) => {
       const chunks = [];
       const mr = new MediaRecorder(stream);
       mr.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); };
-      mr.onstop = () => {
+      mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "vaghee-" + (i + 1) + ".webm";
-        a.click();
-        toast("فایل صدا دانلود شد");
+        recb.classList.remove("on");
+        recb.textContent = "ضبط صدا";
+        setMic(i, "در حال تبدیل صدا به متن…");
+        try {
+          const b64 = await blobB64(blob);
+          const r = await KargahSync.transcribe(b64, blob.type);
+          const tx = (r && r.text) || "";
+          if (tx) {
+            const prev = items[i].vaghee || items[i].goft || "";
+            putVaghee(i, (prev ? prev + " " : "") + tx);
+            setMic(i, "رونوشت رفت توی ستون واقعه");
+            toast("متن صدا آمد");
+          } else {
+            toast("متن ساخته نشد؛ در جعبهٔ رونوشت بنویس");
+            setMic(i, "متن ساخته نشد");
+          }
+        } catch (err) {
+          toast("تبدیل نشد؛ در جعبهٔ رونوشت بنویس");
+          setMic(i, "تبدیل نشد");
+        }
       };
       mr.start();
       recb.classList.add("on");
@@ -344,8 +420,6 @@ list.addEventListener("click", async (e) => {
       recb.onclick = (ev2) => {
         ev2.stopPropagation();
         mr.stop();
-        recb.classList.remove("on");
-        recb.textContent = "ضبط صدا";
       };
       toast("ضبط شروع شد");
     } catch (err) {
@@ -367,7 +441,7 @@ list.addEventListener("click", async (e) => {
     const i = +helpb.dataset.help;
     const it = items[i];
     if (!String(it.vaghee || it.goft || "").trim()) {
-      toast("اول واقعه را بگو یا بنویس");
+      toast("اول در جعبهٔ رونوشت یا واقعه بنویس");
       return;
     }
     helpb.disabled = true;
@@ -376,7 +450,7 @@ list.addEventListener("click", async (e) => {
       const r = await KargahSync.helpFill({
         title: it.title || "",
         vaghee: it.vaghee || it.goft || "",
-        transcript: it.goft || "",
+        transcript: it.goft || it.vaghee || "",
         negah: it.negah || "",
         naqab: it.naqab || "",
         olgo: it.olgo || "",
@@ -433,10 +507,20 @@ document.getElementById("btnTxt").onclick = () => {
   a.click();
 };
 
+function applyHdr(off) {
+  document.documentElement.classList.toggle("hdr-off", !!off);
+  try { localStorage.setItem("kargah-hdr-off", off ? "1" : "0"); } catch (e) {}
+  const b = document.getElementById("btnHdr");
+  if (b) b.textContent = off ? "نمایش هدر" : "پنهان هدر";
+}
+document.getElementById("btnHdr").onclick = () => {
+  applyHdr(!document.documentElement.classList.contains("hdr-off"));
+};
 async function start() {
   try { if (window.KargahSync) await KargahSync.boot(); } catch (e) {}
   items = load();
   paint();
+  try { applyHdr(localStorage.getItem("kargah-hdr-off") === "1"); } catch (e) {}
 }
 start();
 </script>

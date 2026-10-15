@@ -1,6 +1,7 @@
 /* همگام پیشرفت کارگاه‌ها بین گوشی و لپ‌تاپ — کلادفلر */
 (function (global) {
   const ROOM_LS = "kargah-sync-room";
+  const DEFAULT_ROOM = "zendegi-home";
   const API = "https://kargah-sync.minasi24100.workers.dev";
   const KNOWN = [
     "kargah-zendegi-v1",
@@ -11,6 +12,13 @@
     "form-neshast-v1",
     "form-vaghee-class-v1"
   ];
+  const ALIASES = {
+    "kargah-zendegi-v1": [
+      "personal-os-kamel-v2",
+      "personal-os-recomp-v2",
+      "personal-os-recomp-v1"
+    ]
+  };
 
   function faNum(n) {
     return String(n).replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
@@ -112,7 +120,19 @@
     else if (ta) out.transcript = a.transcript;
     return out;
   }
+  function migrateAliases() {
+    Object.keys(ALIASES).forEach((main) => {
+      let acc = readLocal(main);
+      ALIASES[main].forEach((k) => {
+        acc = mergeState(acc, readLocal(k));
+      });
+      try {
+        localStorage.setItem(main, JSON.stringify(acc));
+      } catch (e) {}
+    });
+  }
   function snapshot() {
+    migrateAliases();
     const keys = {};
     KNOWN.forEach((k) => {
       const s = readLocal(k);
@@ -202,11 +222,15 @@
     const id = room();
     if (!id) return false;
     try {
-      const remote = await api("/room/" + encodeURIComponent(id), "GET");
-      applySnapshot(remote);
+      const r = await fetch(API + "/room/" + encodeURIComponent(id), {
+        headers: { Accept: "application/json" }
+      });
+      if (r.status === 404) return false;
+      if (!r.ok) throw new Error("api " + r.status);
+      applySnapshot(await r.json());
       return true;
     } catch (e) {
-      return false;
+      return null;
     }
   }
   async function push() {
@@ -228,6 +252,7 @@
   }
 
   async function boot() {
+    migrateAliases();
     try {
       const usp = new URLSearchParams(location.search);
       const s = usp.get("s");
@@ -238,7 +263,10 @@
       const r = usp.get("room");
       if (r) setRoom(r.replace(/[^a-zA-Z0-9_-]/g, ""));
     } catch (e) {}
-    await pull();
+    if (!room()) setRoom(DEFAULT_ROOM);
+    const got = await pull();
+    if (got === null) return;
+    await push();
   }
 
   async function createRoom() {
@@ -250,8 +278,8 @@
     id = String(id || "").trim();
     if (!id) throw new Error("empty");
     setRoom(id);
-    const ok = await pull();
-    if (!ok) throw new Error("join");
+    const got = await pull();
+    if (got === null) throw new Error("join");
     await push();
     return id;
   }
@@ -259,9 +287,13 @@
   async function helpFill(body) {
     return api("/help", "POST", body);
   }
+  async function transcribe(audioB64, mime) {
+    return api("/transcribe", "POST", { audio: audioB64, mime: mime || "" });
+  }
 
   global.KargahSync = {
     API: API,
+    DEFAULT_ROOM: DEFAULT_ROOM,
     KNOWN: KNOWN,
     faNum: faNum,
     snapshot: snapshot,
@@ -279,6 +311,8 @@
     boot: boot,
     createRoom: createRoom,
     joinRoom: joinRoom,
-    helpFill: helpFill
+    helpFill: helpFill,
+    transcribe: transcribe,
+    migrateAliases: migrateAliases
   };
 })(typeof window !== "undefined" ? window : this);
