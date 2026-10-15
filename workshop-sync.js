@@ -3,10 +3,11 @@
   const ROOM_LS = "kargah-sync-room";
   const DEFAULT_ROOM = "zendegi-home";
   const APIS = [
-    "https://kargah-sync.minasi24100.workers.dev",
-    "https://kargah-home.pages.dev"
+    "https://kargah-home.pages.dev",
+    "https://kargah-sync.minasi24100.workers.dev"
   ];
-  let API = APIS[0];
+  const API_LS = "kargah-sync-api";
+  let API = "";
   let lastStatus = { ok: false, err: "", at: 0, api: "" };
   const KNOWN = [
     "kargah-zendegi-v1",
@@ -193,35 +194,122 @@
     return { v: 1, t: Date.now(), keys: keys };
   }
 
+  function rememberApi(base) {
+    API = base;
+    try {
+      localStorage.setItem(API_LS, base);
+    } catch (e) {}
+    lastStatus = { ok: true, err: "", at: Date.now(), api: base };
+  }
+  function apiOrder() {
+    let saved = "";
+    try {
+      saved = localStorage.getItem(API_LS) || "";
+    } catch (e) {}
+    const order = [];
+    if (API) order.push(API);
+    if (saved && order.indexOf(saved) === -1) order.push(saved);
+    APIS.forEach(function (a) {
+      if (order.indexOf(a) === -1) order.push(a);
+    });
+    return order;
+  }
+  async function ping(base, ms) {
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 4000) : 0;
+    try {
+      const r = await fetch(base + "/", {
+        method: "GET",
+        cache: "no-store",
+        signal: ctrl ? ctrl.signal : undefined
+      });
+      return !!r.ok;
+    } catch (e) {
+      return false;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  async function pickApi() {
+    const order = apiOrder();
+    for (let i = 0; i < order.length; i++) {
+      if (await ping(order[i], 4000)) {
+        rememberApi(order[i]);
+        return order[i];
+      }
+    }
+    lastStatus = { ok: false, err: "offline", at: Date.now(), api: "" };
+    return "";
+  }
+  async function send(base, path, method, body, headers, wait) {
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, wait) : 0;
+    try {
+      const r = await fetch(base + path, {
+        method: method,
+        headers: headers,
+        body: body,
+        signal: ctrl ? ctrl.signal : undefined
+      });
+      return r;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
   async function api(path, method, body) {
     let lastErr = "offline";
-    const wait = path.indexOf("/transcribe") !== -1 ? 28000 : 12000;
-    for (let a = 0; a < APIS.length; a++) {
-      const base = APIS[a];
-      const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, wait) : 0;
+    const wait = path.indexOf("/transcribe") !== -1 || path.indexOf("/help") !== -1 ? 22000 : 10000;
+    const order = apiOrder();
+    for (let a = 0; a < order.length; a++) {
+      const base = order[a];
       try {
-        const r = await fetch(base + path, {
-          method: method,
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: body != null ? JSON.stringify(body) : undefined,
-          signal: ctrl ? ctrl.signal : undefined
-        });
+        const r = await send(
+          base,
+          path,
+          method,
+          body != null ? JSON.stringify(body) : undefined,
+          { "Content-Type": "application/json", Accept: "application/json" },
+          wait
+        );
         if (!r.ok) {
           lastErr = "api " + r.status;
           if (r.status === 404) {
-            API = base;
+            rememberApi(base);
             throw new Error(lastErr);
           }
           continue;
         }
-        API = base;
-        lastStatus = { ok: true, err: "", at: Date.now(), api: base };
+        rememberApi(base);
         return r.json();
       } catch (e) {
         lastErr = String(e && e.message ? e.message : e);
-      } finally {
-        if (timer) clearTimeout(timer);
+      }
+    }
+    lastStatus = { ok: false, err: lastErr, at: Date.now(), api: "" };
+    throw new Error(lastErr);
+  }
+  async function apiRaw(path, blob, mime) {
+    let lastErr = "offline";
+    const order = apiOrder();
+    for (let a = 0; a < order.length; a++) {
+      const base = order[a];
+      try {
+        const r = await send(
+          base,
+          path,
+          "POST",
+          blob,
+          { "Content-Type": mime || "audio/wav", Accept: "application/json" },
+          22000
+        );
+        if (!r.ok) {
+          lastErr = "api " + r.status;
+          continue;
+        }
+        rememberApi(base);
+        return r.json();
+      } catch (e) {
+        lastErr = String(e && e.message ? e.message : e);
       }
     }
     lastStatus = { ok: false, err: lastErr, at: Date.now(), api: "" };
@@ -276,6 +364,7 @@
   }
 
   async function boot() {
+    await pickApi();
     migrateAliases();
     let old = "";
     try {
@@ -316,8 +405,11 @@
   async function helpFill(body) {
     return api("/help", "POST", body);
   }
-  async function transcribe(audioB64, mime) {
-    return api("/transcribe", "POST", { audio: audioB64, mime: mime || "" });
+  async function transcribe(audio, mime) {
+    if (audio && typeof audio.size === "number") {
+      return apiRaw("/transcribe", audio, mime || audio.type || "audio/wav");
+    }
+    return api("/transcribe", "POST", { audio: audio, mime: mime || "" });
   }
 
   global.KargahSync = {
@@ -346,6 +438,7 @@
     joinRoom: joinRoom,
     helpFill: helpFill,
     transcribe: transcribe,
+    pickApi: pickApi,
     migrateAliases: migrateAliases
   };
 })(typeof window !== "undefined" ? window : this);

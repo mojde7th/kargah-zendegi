@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-store"/>
+<title>فرم واقعه — ابر گوشی</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--paper:#f6efe2;--ink:#2a241c;--line:#c9b89a;--gold:#7a5c2e;--screen:#1b1712;--red:#9b2c2c}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--screen);color:var(--paper);font:16px/1.85 Vazirmatn,Tahoma,sans-serif}
+.toolbar{position:sticky;top:0;z-index:20;background:#14110d;border-bottom:1px solid #3a3328;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar a,.toolbar button{font:700 14px Vazirmatn,sans-serif;background:#2a241c;color:var(--paper);border:1px solid #5a4e3c;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer;text-decoration:none}
+.wrap{max-width:880px;margin:0 auto;padding:16px 14px 100px}
+h1{font-size:1.2rem;margin:0 0 8px;color:#e8d7b0}
+.sub{color:#cbbda6;margin:0 0 16px}
+.sheet{background:var(--paper);color:var(--ink);border:1px solid #d8c7a8;border-radius:14px;padding:16px;margin:0 0 22px}
+.sheet h2{margin:0 0 10px;font-size:1.05rem;color:var(--gold)}
+.headrow{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.headrow input{flex:1}
+label{display:block;font-weight:800;font-size:.82rem;color:var(--gold);margin:10px 0 4px}
+input,textarea{width:100%;border:1px dashed var(--line);border-radius:10px;background:rgba(255,255,255,.45);color:var(--ink);font:16px/1.8 Vazirmatn,Tahoma,sans-serif;padding:10px}
+textarea{resize:vertical;min-height:72px}
+#liveBox{min-height:180px;font-size:18px;background:#fff;border:2px solid var(--gold)}
+.recbar{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
+.recbtn{flex:0 0 auto;width:84px;height:84px;border-radius:50%;border:0;background:var(--red);color:#fff;font:800 16px Vazirmatn,sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(155,44,44,.35)}
+.recbtn.on{animation:pulse 1.2s infinite;background:#c0392b}
+@keyframes pulse{50%{transform:scale(1.06)}}
+.recmeta{flex:1}
+.mic{margin:0;color:var(--gold);font-weight:800;min-height:1.5em}
+.lvl{height:10px;background:#e6dcc8;border-radius:6px;overflow:hidden;margin-top:8px}
+.lvl>i{display:block;height:100%;width:2%;background:var(--red);transition:width .12s}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.del{background:transparent;border:1px solid var(--line);color:#7a3b2e;border-radius:8px;padding:6px 10px;font:700 13px Vazirmatn,sans-serif;cursor:pointer}
+.cloud{margin:0 0 14px;color:#9ad7b8;font-size:.9rem}
+.vagehead{display:flex;gap:10px;align-items:stretch;margin:0 0 12px}
+.vagcol{flex:1;min-width:0}
+.sidehelp{flex:0 0 150px;display:flex;flex-direction:column;gap:8px;justify-content:flex-end}
+.helpbtn{font:800 14px Vazirmatn,sans-serif;background:var(--gold);color:#fff;border:0;border-radius:12px;padding:12px 10px;min-height:88px;cursor:pointer;line-height:1.4}
+.hint{margin:0 0 4px;font-size:.75rem;color:#8a7048;font-weight:400;line-height:1.6}
+.helpst{margin:0;font-size:.8rem;color:var(--gold);font-weight:700;min-height:1.4em;line-height:1.5}
+#wk-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#14352e;color:#86e0a3;border:1px solid #86e0a3;padding:10px 18px;border-radius:12px;z-index:80;font:600 15px Vazirmatn,sans-serif;display:none;max-width:90%}
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr}
+  .vagehead{flex-direction:column}
+  .sidehelp{flex:none;flex-direction:row;align-items:center}
+  .helpbtn{min-height:48px;flex:0 0 auto}
+}
+@media print{.toolbar,.recbar,.sidehelp,.mic,.cloud{display:none!important}}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <a href="index.html">فهرست</a>
+  <button type="button" id="btnAdd">واقعهٔ تازه</button>
+  <button type="button" id="btnSave">ذخیره</button>
+  <button type="button" id="btnPrint">چاپ</button>
+</div>
+<div class="wrap">
+  <h1>فرم واقعه — ابر گوشی</h1>
+  <p class="sub">دکمهٔ سرخ ضبط است. پیشنهاد ستون‌ها همان بالا کنار واقعه است. اگر ابر وصل نشد پیامش را همین‌جا می‌بینی.</p>
+  <p class="cloud" id="cloud">ابر: در حال وصل…</p>
+  <div id="list"></div>
+</div>
+<script src="workshop-sync.js?v=12"></script>
+<script>
+const LS = "form-vaghee-class-v1";
+const FIELDS = [
+  ["negah", "نگاه"],
+  ["naqab", "نقاب و نقش"],
+  ["olgo", "الگوی رفتاری"],
+  ["dokon", "دکان"],
+  ["tars", "ترس و مبادا"],
+  ["darun", "تجربهٔ درونی"],
+  ["sen", "سناریوها"],
+  ["jumle", "جملهٔ آزمایشی ته"]
+];
+const HINTS = {
+  negah: "چشم تو کجا بود. چشم او کجا بود.",
+  naqab: "کدام نسخه از تو جلو آمد تا زنده بماند.",
+  olgo: "محرک، کار بدن، کار دهان، بعد چه شد.",
+  dokon: "اگر آرام می‌ماندی، چه کار سختی لازم بود.",
+  tars: "مبادا چه.",
+  darun: "گلو، سینه، صورت، زمان.",
+  sen: "سه احتمال. همان را که بدن گرم کرد نگه دار.",
+  jumle: "با شاید شروع کن."
+};
+const COLS = ["negah", "naqab", "olgo", "dokon", "tars", "darun", "sen", "jumle"];
+function faNum(n) {
+  return String(n).replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+}
+function toast(msg) {
+  let el = document.getElementById("wk-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "wk-toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = "block";
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display = "none"; }, 2200);
+}
+function blank() {
+  const o = { title: "", goft: "", vaghee: "" };
+  FIELDS.forEach(([k]) => { o[k] = ""; });
+  return o;
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS));
+    if (s && Array.isArray(s.items) && s.items.length) return s.items;
+  } catch (e) {}
+  return [blank()];
+}
+function save(list) {
+  localStorage.setItem(LS, JSON.stringify({ items: list, t: Date.now() }));
+  if (window.KargahSync && KargahSync.pushSoon) KargahSync.pushSoon();
+}
+function el(tag, attrs, html) {
+  const n = document.createElement(tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => n.setAttribute(k, v));
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+let items = [];
+const list = document.getElementById("list");
+let recIndex = -1;
+let recording = false;
+let recCtx = null;
+let recProc = null;
+let recGain = null;
+let recSrc = null;
+let recStream = null;
+let recPcm = [];
+let recRate = 16000;
+let recClock = 0;
+let recChunk = 0;
+let recStarted = 0;
+let recBusy = false;
+let rec = null;
+let listenOn = false;
+let recFinal = "";
+let recKeepOsc = null;
+let recKeepGain = null;
+let recMr = null;
+let recMrBuf = [];
+let recChain = Promise.resolve();
+let recLevel = 0;
+const helpTimer = {};
+const helpBusy = {};
+const helpLast = {};
+const aiMark = {};
+
+function paint() {
+  const keep = recIndex;
+  const was = recording;
+  list.innerHTML = "";
+  items.forEach((it, i) => {
+    const sheet = el("article", { class: "sheet", "data-i": String(i) });
+    const head = el("div", { class: "headrow" });
+    const t = el("input", { "data-k": "title", "data-i": String(i), placeholder: "عنوان اختیاری" });
+    t.value = it.title || "";
+    head.appendChild(t);
+    head.appendChild(el("button", { type: "button", class: "del", "data-del": String(i) }, "حذف"));
+    sheet.appendChild(el("h2", {}, "برگهٔ " + faNum(i + 1)));
+    sheet.appendChild(head);
+
+    const recbar = el("div", { class: "recbar" });
+    const btn = el("button", { type: "button", class: "recbtn", "data-rec": String(i) }, "ضبط");
+    const meta = el("div", { class: "recmeta" });
+    meta.appendChild(el("p", { class: "mic", "data-mic": String(i) }, "ضبط را بزن و حرف بزن"));
+    const lvl = el("div", { class: "lvl" });
+    lvl.appendChild(el("i", { "data-lvl": String(i) }));
+    meta.appendChild(lvl);
+    recbar.appendChild(btn);
+    recbar.appendChild(meta);
+    sheet.appendChild(recbar);
+
+    const vage = el("div", { class: "vagehead" });
+    const vcol = el("div", { class: "vagcol" });
+    vcol.appendChild(el("label", {}, "واقعه — متن زنده"));
+    const live = el("textarea", { id: i === 0 ? "liveBox" : "", "data-k": "vaghee", "data-i": String(i) });
+    if (i === 0) live.id = "liveBox";
+    live.rows = 8;
+    live.placeholder = "اینجا باید همان لحظه که حرف می‌زنی پر شود";
+    live.value = it.vaghee || it.goft || "";
+    vcol.appendChild(live);
+    const side = el("div", { class: "sidehelp" });
+    side.appendChild(el("button", { type: "button", class: "helpbtn", "data-help": String(i) }, "پیشنهاد ستون‌ها"));
+    side.appendChild(el("p", { class: "helpst", "data-helpst": String(i) }, "همین‌جا کنار واقعه ساخته می‌شود"));
+    vage.appendChild(vcol);
+    vage.appendChild(side);
+    sheet.appendChild(vage);
+
+    const grid = el("div", { class: "grid" });
+    FIELDS.forEach(([k, lab], idx) => {
+      const box = document.createElement("div");
+      if (idx >= 6) box.style.gridColumn = "1 / -1";
+      box.appendChild(el("label", {}, lab));
+      box.appendChild(el("p", { class: "hint" }, HINTS[k] || ""));
+      const ta = document.createElement("textarea");
+      ta.dataset.k = k;
+      ta.dataset.i = String(i);
+      ta.rows = k === "sen" ? 3 : 2;
+      ta.value = it[k] || "";
+      box.appendChild(ta);
+      grid.appendChild(box);
+    });
+    sheet.appendChild(grid);
+    list.appendChild(sheet);
+  });
+  if (was && keep >= 0) {
+    const b = list.querySelector('[data-rec="' + keep + '"]');
+    if (b) {
+      b.classList.add("on");
+      b.textContent = "بایست";
+    }
+  }
+}
+function readDom() {
+  items.forEach((_, i) => {
+    const root = list.querySelector('.sheet[data-i="' + i + '"]');
+    if (!root) return;
+    root.querySelectorAll("[data-k]").forEach((n) => {
+      items[i][n.dataset.k] = n.value;
+    });
+    items[i].goft = items[i].vaghee || "";
+  });
+}
+function setMic(i, msg) {
+  const n = list.querySelector('[data-mic="' + i + '"]');
+  if (n) n.textContent = msg;
+}
+function setHelpSt(i, msg) {
+  const n = list.querySelector('[data-helpst="' + i + '"]');
+  if (n) n.textContent = msg;
+}
+function putField(i, k, val) {
+  const add = String(val || "").trim();
+  if (!add) return false;
+  items[i][k] = add;
+  const n = list.querySelector('.sheet[data-i="' + i + '"] [data-k="' + k + '"]');
+  if (n) n.value = add;
+  return true;
+}
+function scheduleHelp(i, live) {
+  clearTimeout(helpTimer[i]);
+  helpTimer[i] = setTimeout(function () { runHelp(i, live); }, live ? 2400 : 280);
+}
+async function runHelp(i, live) {
+  const it = items[i];
+  if (!it) return;
+  const vg = String(it.vaghee || "").trim();
+  if (vg.length < (live ? 28 : 12)) return;
+  if (helpBusy[i]) {
+    scheduleHelp(i, live);
+    return;
+  }
+  if (live && helpLast[i] === vg) return;
+  helpBusy[i] = true;
+  setHelpSt(i, "دارم ستون‌ها را از همین واقعه می‌سازم…");
+  try {
+    const r = await KargahSync.helpFill({
+      title: it.title || "",
+      vaghee: vg,
+      transcript: vg,
+      live: !!live,
+      negah: it.negah || "",
+      naqab: it.naqab || "",
+      olgo: it.olgo || "",
+      dokon: it.dokon || "",
+      tars: it.tars || "",
+      darun: it.darun || "",
+      sen: it.sen || "",
+      jumle: it.jumle || ""
+    });
+    const f = (r && (r.fields || r)) || {};
+    const mark = aiMark[i] || {};
+    let n = 0;
+    COLS.forEach(function (k) {
+      const nxt = String(f[k] || "").trim();
+      if (!nxt) return;
+      const cur = String(it[k] || "").trim();
+      const owned = mark[k] === "__user__";
+      if (owned) return;
+      if (!cur || cur === mark[k] || nxt.length >= cur.length) {
+        if (putField(i, k, nxt)) {
+          mark[k] = nxt;
+          n++;
+        }
+      }
+    });
+    if (!live && f.vaghee) {
+      const cleaned = String(f.vaghee).trim();
+      if (cleaned && cleaned.length >= Math.floor(vg.length * 0.55)) {
+        putVaghee(i, cleaned, false, true);
+      }
+    }
+    if (f.title && !String(it.title || "").trim()) putField(i, "title", f.title);
+    aiMark[i] = mark;
+    helpLast[i] = vg;
+    save(items);
+    setHelpSt(i, n ? "ستون‌ها از روی واقعه آمد" : "ستون تازه نیامد — کمی بیشتر حرف بزن");
+    if (n) toast("ستون‌ها آمد");
+  } catch (e) {
+    setHelpSt(i, live ? "ستون‌ها کمی بعد دوباره می‌آیند" : "ابر گوشی جواب نداد — شبکه را عوض کن");
+    if (!live) toast("ابر گوشی جواب نداد");
+  }
+  helpBusy[i] = false;
+}
+function putVaghee(i, text, append, skipHelp) {
+  const add = String(text || "").trim();
+  if (!add) return;
+  const cur = String(items[i].vaghee || "").trim();
+  let t = add;
+  if (append && cur) {
+    if (cur.indexOf(add) !== -1) t = cur;
+    else t = cur + (/\s$/.test(cur) ? "" : " ") + add;
+  }
+  items[i].vaghee = t;
+  items[i].goft = t;
+  const v = list.querySelector('.sheet[data-i="' + i + '"] textarea[data-k="vaghee"]');
+  if (v) v.value = t;
+  save(items);
+  if (!skipHelp) scheduleHelp(i, recording && recIndex === i);
+}
+function blobB64(blob) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result || ""));
+    fr.onerror = reject;
+    fr.readAsDataURL(blob);
+  });
+}
+function isIOS() {
+  const u = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(u) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+function rmsOf(arr) {
+  let s = 0;
+  for (let i = 0; i < arr.length; i++) s += arr[i] * arr[i];
+  return Math.sqrt(s / Math.max(1, arr.length));
+}
+function setLevel(i, pct) {
+  const n = list.querySelector('[data-lvl="' + i + '"]');
+  if (n) n.style.width = Math.max(2, Math.min(100, pct)) + "%";
+}
+function junkTx(tx) {
+  const s = String(tx || "").trim().toLowerCase();
+  if (!s) return true;
+  return /^(thanks for watching\.?|thank you\.?|thanks\.?|you|bye\.?|music|\[music\])$/.test(s);
+}
+function pcmToWav(chunks, sampleRate) {
+  let total = 0;
+  chunks.forEach((c) => { total += c.length; });
+  const merged = new Float32Array(total);
+  let off = 0;
+  chunks.forEach((c) => { merged.set(c, off); off += c.length; });
+  const target = 16000;
+  const step = sampleRate / target;
+  const n = Math.max(1, Math.floor(merged.length / step));
+  const pcm = new Int16Array(n);
+  let peak = 0;
+  for (let i = 0; i < n; i++) {
+    const s = Math.max(-1, Math.min(1, merged[Math.min(merged.length - 1, Math.floor(i * step))]));
+    const v = s < 0 ? s * 0x8000 : s * 0x7fff;
+    pcm[i] = v;
+    const a = Math.abs(v);
+    if (a > peak) peak = a;
+  }
+  const peakF = peak / 0x8000;
+  if (peakF > 0.004 && peakF < 0.35) {
+    const gain = Math.min(12, 0.8 / peakF);
+    for (let i = 0; i < n; i++) {
+      let x = pcm[i] * gain;
+      if (x > 32767) x = 32767;
+      if (x < -32768) x = -32768;
+      pcm[i] = x;
+    }
+  }
+  const bytes = pcm.byteLength;
+  const buf = new ArrayBuffer(44 + bytes);
+  const v = new DataView(buf);
+  function wstr(at, s) {
+    for (let i = 0; i < s.length; i++) v.setUint8(at + i, s.charCodeAt(i));
+  }
+  wstr(0, "RIFF");
+  v.setUint32(4, 36 + bytes, true);
+  wstr(8, "WAVE");
+  wstr(12, "fmt ");
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, target, true);
+  v.setUint32(28, target * 2, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  wstr(36, "data");
+  v.setUint32(40, bytes, true);
+  new Uint8Array(buf, 44).set(new Uint8Array(pcm.buffer));
+  return { blob: new Blob([buf], { type: "audio/wav" }), peak: peakF, samples: n };
+}
+function Speech() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition;
+}
+function startDictation(i) {
+  const Rec = Speech();
+  if (!Rec || isIOS()) return;
+  listenOn = true;
+  recFinal = items[i].vaghee || "";
+  function arm() {
+    if (!listenOn || recIndex !== i) return;
+    const r = new Rec();
+    r.lang = "fa-IR";
+    r.continuous = true;
+    r.interimResults = true;
+    r.onresult = function (ev) {
+      let inter = "";
+      for (let n = ev.resultIndex; n < ev.results.length; n++) {
+        const tx = ev.results[n][0].transcript;
+        if (ev.results[n].isFinal) recFinal += (recFinal && !/\s$/.test(recFinal) ? " " : "") + tx;
+        else inter += tx;
+      }
+      const shown = (recFinal + (inter ? " " + inter : "")).trim();
+      if (shown) putVaghee(i, shown);
+    };
+    r.onerror = function () {};
+    r.onend = function () {
+      rec = null;
+      if (listenOn && recIndex === i) setTimeout(arm, 80);
+    };
+    try { r.start(); rec = r; } catch (e) { setTimeout(arm, 300); }
+  }
+  arm();
+}
+function queueFlush(i, last) {
+  recChain = recChain.then(function () { return flushChunk(i, last); }).catch(function () {});
+  return recChain;
+}
+async function flushChunk(i, last) {
+  const keep = last ? 0 : Math.max(1, Math.ceil((recRate * 0.25) / 4096));
+  const chunks = recPcm.slice();
+  if (!chunks.length) {
+    if (last) setMic(i, "صدایی در بافر نبود");
+    return;
+  }
+  recPcm = keep ? recPcm.slice(-keep) : [];
+  const wav = pcmToWav(chunks, recRate);
+  if (wav.peak < 0.008) {
+    setMic(i, last ? "میکروفن ساکت بود — نزدیک‌تر حرف بزن" : "صدا کم است — بلندتر بگو");
+    return;
+  }
+  recBusy = true;
+  setMic(i, "دارم همین الان می‌نویسم…");
+  try {
+    const r = await KargahSync.transcribe(wav.blob, "audio/wav");
+    const tx = (r && r.text) || "";
+    if (tx && !junkTx(tx)) {
+      putVaghee(i, tx, true);
+      setMic(i, "در واقعه نوشته شد — ادامه بده");
+    } else {
+      setMic(i, "ابر متن نداد — چند ثانیه دیگر حرف بزن");
+    }
+  } catch (e) {
+    try { if (KargahSync.pickApi) await KargahSync.pickApi(); } catch (x) {}
+    setMic(i, "ابر گوشی جواب نداد — وای‌فای یا اینترنت را عوض کن");
+    toast("ابر گوشی جواب نداد");
+  }
+  recBusy = false;
+}
+function unlockAudio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  const ctx = new AC();
+  const proc = ctx.createScriptProcessor(4096, 1, 1);
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  gain.gain.value = 0.0004;
+  osc.frequency.value = 20;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  proc.connect(ctx.destination);
+  try { ctx.resume(); } catch (e) {}
+  try { osc.start(); } catch (e) {}
+  return { ctx: ctx, proc: proc, osc: osc, gain: gain };
+}
+function stopGraph(closeCtx) {
+  listenOn = false;
+  clearInterval(recClock);
+  clearInterval(recChunk);
+  try { if (rec) rec.stop(); } catch (e) {}
+  rec = null;
+  try {
+    if (recMr && recMr.state !== "inactive") recMr.stop();
+  } catch (e) {}
+  try { if (recKeepOsc) recKeepOsc.stop(); } catch (e) {}
+  try { if (recProc) recProc.disconnect(); } catch (e) {}
+  try { if (recSrc) recSrc.disconnect(); } catch (e) {}
+  try { if (recGain) recGain.disconnect(); } catch (e) {}
+  try { if (recKeepGain) recKeepGain.disconnect(); } catch (e) {}
+  if (closeCtx) {
+    try { if (recCtx && recCtx.state !== "closed") recCtx.close(); } catch (e) {}
+    recCtx = null;
+  }
+  if (recStream) recStream.getTracks().forEach((t) => t.stop());
+  recProc = recSrc = recGain = recKeepOsc = recKeepGain = recStream = recMr = null;
+  recording = false;
+}
+function markRec(i, on) {
+  const b = list.querySelector('[data-rec="' + i + '"]');
+  if (!b) return;
+  b.classList.toggle("on", !!on);
+  b.textContent = on ? "بایست" : "ضبط";
+}
+async function startRec(i, unlocked) {
+  if (recording && recIndex === i) {
+    await stopRec(i);
+    return;
+  }
+  if (recording) await stopRec(recIndex);
+  if (!unlocked || !unlocked.ctx) {
+    toast("ضبط در این مرورگر باز نشد");
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    toast("میکروفن این مرورگر بسته است");
+    return;
+  }
+  recCtx = unlocked.ctx;
+  recProc = unlocked.proc;
+  recKeepOsc = unlocked.osc;
+  recKeepGain = unlocked.gain;
+  recGain = unlocked.gain;
+  if (recCtx.state === "suspended") {
+    try { await recCtx.resume(); } catch (e) {}
+  }
+  recRate = recCtx.sampleRate || 44100;
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    toast("اجازهٔ میکروفن را بده");
+    stopGraph(true);
+    return;
+  }
+  if (recCtx.state === "suspended") {
+    try { await recCtx.resume(); } catch (e) {}
+  }
+  recStream = stream;
+  recSrc = recCtx.createMediaStreamSource(stream);
+  recPcm = [];
+  recMrBuf = [];
+  recProc.onaudioprocess = function (ev) {
+    if (!recording) return;
+    const data = ev.inputBuffer.getChannelData(0);
+    recPcm.push(new Float32Array(data));
+    recLevel = rmsOf(data);
+    setLevel(i, recLevel * 500);
+  };
+  recSrc.connect(recProc);
+  try {
+    const mime = (window.MediaRecorder && MediaRecorder.isTypeSupported("audio/mp4")) ? "audio/mp4" : "";
+    recMr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    recMr.ondataavailable = function (e) {
+      if (e.data && e.data.size) recMrBuf.push(e.data);
+    };
+    recMr.start(3000);
+  } catch (e) {
+    recMr = null;
+  }
+  recording = true;
+  recIndex = i;
+  recStarted = Date.now();
+  markRec(i, true);
+  startDictation(i);
+  recClock = setInterval(function () {
+    if (recCtx && recCtx.state === "suspended") recCtx.resume();
+    const s = Math.floor((Date.now() - recStarted) / 1000);
+    const has = String(items[i].vaghee || "").trim();
+    const loud = recLevel > 0.01;
+    setMic(i, "ضبط " + faNum(s) + " ثانیه" + (has ? " — متن در واقعه است" : (loud ? " — دارم می‌شنوم" : " — نوار صدا باید تکان بخورد")));
+  }, 400);
+  recChunk = setInterval(function () { queueFlush(i, false); }, 3000);
+  setMic(i, "ضبط روشن است. بلند حرف بزن");
+  toast("ضبط روشن شد");
+}
+async function blobToWav(blob, ctx) {
+  const arr = await blob.arrayBuffer();
+  const buf = await ctx.decodeAudioData(arr.slice(0));
+  const ch = buf.getChannelData(0);
+  return pcmToWav([new Float32Array(ch)], buf.sampleRate);
+}
+async function stopRec(i) {
+  const leftover = recPcm.slice();
+  const rate = recRate;
+  const ctx = recCtx;
+  const mrParts = recMrBuf.slice();
+  const mrType = recMr && recMr.mimeType ? recMr.mimeType : "audio/mp4";
+  try {
+    if (recMr && recMr.state !== "inactive") {
+      await new Promise(function (resolve) {
+        recMr.onstop = resolve;
+        try { recMr.stop(); } catch (e) { resolve(); }
+        setTimeout(resolve, 1200);
+      });
+    }
+  } catch (e) {}
+  stopGraph(false);
+  markRec(i, false);
+  recPcm = leftover;
+  recRate = rate;
+  recCtx = ctx;
+  await queueFlush(i, true);
+  recPcm = [];
+  let has = String(items[i].vaghee || "").trim();
+  if (!has && ctx && (mrParts.length || recMrBuf.length)) {
+    try {
+      const parts = mrParts.concat(recMrBuf);
+      const blob = new Blob(parts, { type: mrType });
+      if (blob.size > 800) {
+        setMic(i, "دارم آخر صدا را می‌نویسم…");
+        const wav = await blobToWav(blob, ctx);
+        if (wav.peak >= 0.008) {
+          const r = await KargahSync.transcribe(wav.blob, "audio/wav");
+          const tx = (r && r.text) || "";
+          if (tx && !junkTx(tx)) putVaghee(i, tx, true);
+        }
+      }
+    } catch (e) {}
+  }
+  try { if (ctx && ctx.state !== "closed") ctx.close(); } catch (e) {}
+  recCtx = null;
+  has = String(items[i].vaghee || "").trim();
+  setMic(i, has ? "متن در ستون واقعه است" : "متنی نیامد — نوار صدا را نگاه کن و دوباره ضبط کن");
+  toast(has ? "متن ذخیره شد" : "متنی نیامد");
+  if (has) await runHelp(i, false);
+}
+
+list.addEventListener("input", function (e) {
+  readDom();
+  save(items);
+  const t = e.target;
+  if (!t || !t.dataset) return;
+  const i = +t.dataset.i;
+  const k = t.dataset.k;
+  if (k === "vaghee") scheduleHelp(i, false);
+  else if (COLS.indexOf(k) !== -1) {
+    const mark = aiMark[i] || {};
+    mark[k] = "__user__";
+    aiMark[i] = mark;
+  }
+});
+list.addEventListener("click", async function (e) {
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    readDom();
+    items.splice(+del.dataset.del, 1);
+    if (!items.length) items.push(blank());
+    save(items);
+    paint();
+    return;
+  }
+  const recb = e.target.closest("[data-rec]");
+  if (recb) {
+    const idx = +recb.dataset.rec;
+    if (recording && recIndex === idx) {
+      await startRec(idx, null);
+      return;
+    }
+    const unlocked = unlockAudio();
+    await startRec(idx, unlocked);
+    return;
+  }
+  const helpb = e.target.closest("[data-help]");
+  if (helpb) {
+    readDom();
+    const i = +helpb.dataset.help;
+    if (!String(items[i].vaghee || "").trim()) {
+      toast("اول ضبط کن یا واقعه را بنویس");
+      return;
+    }
+    helpb.disabled = true;
+    await runHelp(i, false);
+    helpb.disabled = false;
+  }
+});
+document.getElementById("btnAdd").onclick = function () {
+  readDom();
+  items.push(blank());
+  save(items);
+  paint();
+};
+document.getElementById("btnSave").onclick = function () { readDom(); save(items); toast("ذخیره شد"); };
+document.getElementById("btnPrint").onclick = function () { readDom(); save(items); window.print(); };
+
+function paintCloud() {
+  const n = document.getElementById("cloud");
+  if (!n || !window.KargahSync) return;
+  const st = KargahSync.status();
+  n.textContent = st.ok ? "ابر وصل است" : "ابر گوشی وصل نشد — وای‌فای یا اینترنت همراه را عوض کن";
+}
+async function start() {
+  items = load();
+  paint();
+  try { if (window.KargahSync) await KargahSync.boot(); } catch (e) {}
+  paintCloud();
+}
+start();
+</script>
+</body>
+</html>
