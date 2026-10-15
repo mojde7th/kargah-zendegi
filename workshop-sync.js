@@ -3,7 +3,8 @@
   const ROOM_LS = "kargah-sync-room";
   const DEFAULT_ROOM = "zendegi-home";
   const APIS = [
-    "https://kargah-sync.minasi24100.workers.dev"
+    "https://kargah-sync.minasi24100.workers.dev",
+    "https://kargah-home.pages.dev"
   ];
   let API = APIS[0];
   let lastStatus = { ok: false, err: "", at: 0, api: "" };
@@ -194,10 +195,11 @@
 
   async function api(path, method, body) {
     let lastErr = "offline";
+    const wait = path.indexOf("/transcribe") !== -1 ? 28000 : 12000;
     for (let a = 0; a < APIS.length; a++) {
       const base = APIS[a];
       const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 12000) : 0;
+      const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, wait) : 0;
       try {
         const r = await fetch(base + path, {
           method: method,

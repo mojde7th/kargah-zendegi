@@ -29,6 +29,8 @@ textarea{resize:vertical;min-height:72px}
 @keyframes pulse{50%{transform:scale(1.06)}}
 .recmeta{flex:1}
 .mic{margin:0;color:var(--gold);font-weight:800;min-height:1.5em}
+.lvl{height:10px;background:#e6dcc8;border-radius:6px;overflow:hidden;margin-top:8px}
+.lvl>i{display:block;height:100%;width:2%;background:var(--red);transition:width .12s}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .del{background:transparent;border:1px solid var(--line);color:#7a3b2e;border-radius:8px;padding:6px 10px;font:700 13px Vazirmatn,sans-serif;cursor:pointer}
 .help{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}
@@ -47,10 +49,10 @@ textarea{resize:vertical;min-height:72px}
 </div>
 <div class="wrap">
   <h1>فرم واقعه — ضبط زنده</h1>
-  <p class="sub">دکمهٔ سرخ ضبط را بزن و حرف بزن. متن باید همان لحظه داخل ستون واقعه ظاهر شود. کیبورد لازم نیست. دوباره بزن تا بایستد.</p>
+  <p class="sub">دکمهٔ سرخ را بزن، اجازهٔ میکروفن را بده، بلند حرف بزن. نوار صدا باید حرکت کند و متن داخل واقعه بیاید. دوباره بزن تا بایستد.</p>
   <div id="list"></div>
 </div>
-<script src="workshop-sync.js?v=9"></script>
+<script src="workshop-sync.js?v=10"></script>
 <script>
 const LS = "form-vaghee-class-v1";
 const FIELDS = [
@@ -118,6 +120,12 @@ let recBusy = false;
 let rec = null;
 let listenOn = false;
 let recFinal = "";
+let recKeepOsc = null;
+let recKeepGain = null;
+let recMr = null;
+let recMrBuf = [];
+let recChain = Promise.resolve();
+let recLevel = 0;
 
 function paint() {
   const keep = recIndex;
@@ -137,6 +145,9 @@ function paint() {
     const btn = el("button", { type: "button", class: "recbtn", "data-rec": String(i) }, "ضبط");
     const meta = el("div", { class: "recmeta" });
     meta.appendChild(el("p", { class: "mic", "data-mic": String(i) }, "ضبط را بزن و حرف بزن"));
+    const lvl = el("div", { class: "lvl" });
+    lvl.appendChild(el("i", { "data-lvl": String(i) }));
+    meta.appendChild(lvl);
     recbar.appendChild(btn);
     recbar.appendChild(meta);
     sheet.appendChild(recbar);
@@ -213,6 +224,24 @@ function blobB64(blob) {
     fr.readAsDataURL(blob);
   });
 }
+function isIOS() {
+  const u = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(u) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+function rmsOf(arr) {
+  let s = 0;
+  for (let i = 0; i < arr.length; i++) s += arr[i] * arr[i];
+  return Math.sqrt(s / Math.max(1, arr.length));
+}
+function setLevel(i, pct) {
+  const n = list.querySelector('[data-lvl="' + i + '"]');
+  if (n) n.style.width = Math.max(2, Math.min(100, pct)) + "%";
+}
+function junkTx(tx) {
+  const s = String(tx || "").trim().toLowerCase();
+  if (!s) return true;
+  return /^(thanks for watching\.?|thank you\.?|thanks\.?|you|bye\.?|music|\[music\])$/.test(s);
+}
 function pcmToWav(chunks, sampleRate) {
   let total = 0;
   chunks.forEach((c) => { total += c.length; });
@@ -223,9 +252,23 @@ function pcmToWav(chunks, sampleRate) {
   const step = sampleRate / target;
   const n = Math.max(1, Math.floor(merged.length / step));
   const pcm = new Int16Array(n);
+  let peak = 0;
   for (let i = 0; i < n; i++) {
     const s = Math.max(-1, Math.min(1, merged[Math.min(merged.length - 1, Math.floor(i * step))]));
-    pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    const v = s < 0 ? s * 0x8000 : s * 0x7fff;
+    pcm[i] = v;
+    const a = Math.abs(v);
+    if (a > peak) peak = a;
+  }
+  const peakF = peak / 0x8000;
+  if (peakF > 0.004 && peakF < 0.35) {
+    const gain = Math.min(12, 0.8 / peakF);
+    for (let i = 0; i < n; i++) {
+      let x = pcm[i] * gain;
+      if (x > 32767) x = 32767;
+      if (x < -32768) x = -32768;
+      pcm[i] = x;
+    }
   }
   const bytes = pcm.byteLength;
   const buf = new ArrayBuffer(44 + bytes);
@@ -247,14 +290,14 @@ function pcmToWav(chunks, sampleRate) {
   wstr(36, "data");
   v.setUint32(40, bytes, true);
   new Uint8Array(buf, 44).set(new Uint8Array(pcm.buffer));
-  return new Blob([buf], { type: "audio/wav" });
+  return { blob: new Blob([buf], { type: "audio/wav" }), peak: peakF, samples: n };
 }
 function Speech() {
   return window.SpeechRecognition || window.webkitSpeechRecognition;
 }
 function startDictation(i) {
   const Rec = Speech();
-  if (!Rec) return;
+  if (!Rec || isIOS()) return;
   listenOn = true;
   recFinal = items[i].vaghee || "";
   function arm() {
@@ -282,38 +325,76 @@ function startDictation(i) {
   }
   arm();
 }
+function queueFlush(i, last) {
+  recChain = recChain.then(function () { return flushChunk(i, last); }).catch(function () {});
+  return recChain;
+}
 async function flushChunk(i, last) {
-  if (recBusy) return;
-  const keep = last ? 0 : Math.max(1, Math.ceil((recRate * 0.3) / 4096));
+  const keep = last ? 0 : Math.max(1, Math.ceil((recRate * 0.25) / 4096));
   const chunks = recPcm.slice();
-  if (!chunks.length) return;
+  if (!chunks.length) {
+    if (last) setMic(i, "صدایی در بافر نبود");
+    return;
+  }
   recPcm = keep ? recPcm.slice(-keep) : [];
   const wav = pcmToWav(chunks, recRate);
-  if (wav.size < 1200) return;
+  if (wav.peak < 0.008) {
+    setMic(i, last ? "میکروفن ساکت بود — نزدیک‌تر حرف بزن" : "صدا کم است — بلندتر بگو");
+    return;
+  }
   recBusy = true;
   setMic(i, "دارم همین الان می‌نویسم…");
   try {
-    const r = await KargahSync.transcribe(await blobB64(wav), "audio/wav");
+    const r = await KargahSync.transcribe(await blobB64(wav.blob), "audio/wav");
     const tx = (r && r.text) || "";
-    if (tx) {
+    if (tx && !junkTx(tx)) {
       putVaghee(i, tx, true);
       setMic(i, "در واقعه نوشته شد — ادامه بده");
+    } else {
+      setMic(i, "ابر متن نداد — چند ثانیه دیگر حرف بزن");
     }
-  } catch (e) {}
+  } catch (e) {
+    setMic(i, "ابر جواب نداد");
+    toast("ابر جواب نداد");
+  }
   recBusy = false;
 }
-function stopCapture() {
+function unlockAudio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  const ctx = new AC();
+  const proc = ctx.createScriptProcessor(4096, 1, 1);
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  gain.gain.value = 0.0004;
+  osc.frequency.value = 20;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  proc.connect(ctx.destination);
+  try { ctx.resume(); } catch (e) {}
+  try { osc.start(); } catch (e) {}
+  return { ctx: ctx, proc: proc, osc: osc, gain: gain };
+}
+function stopGraph(closeCtx) {
   listenOn = false;
   clearInterval(recClock);
   clearInterval(recChunk);
   try { if (rec) rec.stop(); } catch (e) {}
   rec = null;
+  try {
+    if (recMr && recMr.state !== "inactive") recMr.stop();
+  } catch (e) {}
+  try { if (recKeepOsc) recKeepOsc.stop(); } catch (e) {}
   try { if (recProc) recProc.disconnect(); } catch (e) {}
   try { if (recSrc) recSrc.disconnect(); } catch (e) {}
   try { if (recGain) recGain.disconnect(); } catch (e) {}
-  try { if (recCtx && recCtx.state !== "closed") recCtx.close(); } catch (e) {}
+  try { if (recKeepGain) recKeepGain.disconnect(); } catch (e) {}
+  if (closeCtx) {
+    try { if (recCtx && recCtx.state !== "closed") recCtx.close(); } catch (e) {}
+    recCtx = null;
+  }
   if (recStream) recStream.getTracks().forEach((t) => t.stop());
-  recProc = recSrc = recGain = recCtx = recStream = null;
+  recProc = recSrc = recGain = recKeepOsc = recKeepGain = recStream = recMr = null;
   recording = false;
 }
 function markRec(i, on) {
@@ -322,67 +403,126 @@ function markRec(i, on) {
   b.classList.toggle("on", !!on);
   b.textContent = on ? "بایست" : "ضبط";
 }
-async function startRec(i) {
+async function startRec(i, unlocked) {
   if (recording && recIndex === i) {
     await stopRec(i);
     return;
   }
   if (recording) await stopRec(recIndex);
+  if (!unlocked || !unlocked.ctx) {
+    toast("ضبط در این مرورگر باز نشد");
+    return;
+  }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     toast("میکروفن این مرورگر بسته است");
     return;
   }
+  recCtx = unlocked.ctx;
+  recProc = unlocked.proc;
+  recKeepOsc = unlocked.osc;
+  recKeepGain = unlocked.gain;
+  recGain = unlocked.gain;
+  if (recCtx.state === "suspended") {
+    try { await recCtx.resume(); } catch (e) {}
+  }
+  recRate = recCtx.sampleRate || 44100;
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true } });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
     toast("اجازهٔ میکروفن را بده");
+    stopGraph(true);
     return;
   }
-  const AC = window.AudioContext || window.webkitAudioContext;
-  recCtx = new AC();
-  if (recCtx.state === "suspended") await recCtx.resume();
-  recRate = recCtx.sampleRate || 44100;
+  if (recCtx.state === "suspended") {
+    try { await recCtx.resume(); } catch (e) {}
+  }
   recStream = stream;
   recSrc = recCtx.createMediaStreamSource(stream);
-  recProc = recCtx.createScriptProcessor(4096, 1, 1);
-  recGain = recCtx.createGain();
-  recGain.gain.value = 0;
   recPcm = [];
+  recMrBuf = [];
   recProc.onaudioprocess = function (ev) {
     if (!recording) return;
-    recPcm.push(new Float32Array(ev.inputBuffer.getChannelData(0)));
+    const data = ev.inputBuffer.getChannelData(0);
+    recPcm.push(new Float32Array(data));
+    recLevel = rmsOf(data);
+    setLevel(i, recLevel * 500);
   };
   recSrc.connect(recProc);
-  recProc.connect(recGain);
-  recGain.connect(recCtx.destination);
+  try {
+    const mime = (window.MediaRecorder && MediaRecorder.isTypeSupported("audio/mp4")) ? "audio/mp4" : "";
+    recMr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    recMr.ondataavailable = function (e) {
+      if (e.data && e.data.size) recMrBuf.push(e.data);
+    };
+    recMr.start(3000);
+  } catch (e) {
+    recMr = null;
+  }
   recording = true;
   recIndex = i;
   recStarted = Date.now();
   markRec(i, true);
   startDictation(i);
   recClock = setInterval(function () {
+    if (recCtx && recCtx.state === "suspended") recCtx.resume();
     const s = Math.floor((Date.now() - recStarted) / 1000);
     const has = String(items[i].vaghee || "").trim();
-    setMic(i, "ضبط " + faNum(s) + " ثانیه" + (has ? " — متن در واقعه است" : " — چند ثانیه صبر کن تا بنویسد"));
+    const loud = recLevel > 0.01;
+    setMic(i, "ضبط " + faNum(s) + " ثانیه" + (has ? " — متن در واقعه است" : (loud ? " — دارم می‌شنوم" : " — نوار صدا باید تکان بخورد")));
   }, 400);
-  recChunk = setInterval(function () { flushChunk(i, false); }, 4000);
-  setMic(i, "ضبط روشن است. حرف بزن");
+  recChunk = setInterval(function () { queueFlush(i, false); }, 3000);
+  setMic(i, "ضبط روشن است. بلند حرف بزن");
   toast("ضبط روشن شد");
+}
+async function blobToWav(blob, ctx) {
+  const arr = await blob.arrayBuffer();
+  const buf = await ctx.decodeAudioData(arr.slice(0));
+  const ch = buf.getChannelData(0);
+  return pcmToWav([new Float32Array(ch)], buf.sampleRate);
 }
 async function stopRec(i) {
   const leftover = recPcm.slice();
   const rate = recRate;
-  stopCapture();
+  const ctx = recCtx;
+  const mrParts = recMrBuf.slice();
+  const mrType = recMr && recMr.mimeType ? recMr.mimeType : "audio/mp4";
+  try {
+    if (recMr && recMr.state !== "inactive") {
+      await new Promise(function (resolve) {
+        recMr.onstop = resolve;
+        try { recMr.stop(); } catch (e) { resolve(); }
+        setTimeout(resolve, 1200);
+      });
+    }
+  } catch (e) {}
+  stopGraph(false);
   markRec(i, false);
-  if (leftover.length) {
-    recPcm = leftover;
-    recRate = rate;
-    await flushChunk(i, true);
-    recPcm = [];
+  recPcm = leftover;
+  recRate = rate;
+  recCtx = ctx;
+  await queueFlush(i, true);
+  recPcm = [];
+  let has = String(items[i].vaghee || "").trim();
+  if (!has && ctx && (mrParts.length || recMrBuf.length)) {
+    try {
+      const parts = mrParts.concat(recMrBuf);
+      const blob = new Blob(parts, { type: mrType });
+      if (blob.size > 800) {
+        setMic(i, "دارم آخر صدا را می‌نویسم…");
+        const wav = await blobToWav(blob, ctx);
+        if (wav.peak >= 0.008) {
+          const r = await KargahSync.transcribe(await blobB64(wav.blob), "audio/wav");
+          const tx = (r && r.text) || "";
+          if (tx && !junkTx(tx)) putVaghee(i, tx, true);
+        }
+      }
+    } catch (e) {}
   }
-  const has = String(items[i].vaghee || "").trim();
-  setMic(i, has ? "متن در ستون واقعه است" : "متنی نیامد — دوباره ضبط کن یا بنویس");
+  try { if (ctx && ctx.state !== "closed") ctx.close(); } catch (e) {}
+  recCtx = null;
+  has = String(items[i].vaghee || "").trim();
+  setMic(i, has ? "متن در ستون واقعه است" : "متنی نیامد — نوار صدا را نگاه کن و دوباره ضبط کن");
   toast(has ? "متن ذخیره شد" : "متنی نیامد");
 }
 
@@ -399,7 +539,13 @@ list.addEventListener("click", async function (e) {
   }
   const recb = e.target.closest("[data-rec]");
   if (recb) {
-    await startRec(+recb.dataset.rec);
+    const idx = +recb.dataset.rec;
+    if (recording && recIndex === idx) {
+      await startRec(idx, null);
+      return;
+    }
+    const unlocked = unlockAudio();
+    await startRec(idx, unlocked);
     return;
   }
   const helpb = e.target.closest("[data-help]");
