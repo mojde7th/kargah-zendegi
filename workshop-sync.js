@@ -402,7 +402,103 @@
     return DEFAULT_ROOM;
   }
 
+  const HELP_SYS =
+    "تو تسهیل‌گر کارگاه فرم واقعه هستی، نه پزشک. تشخیص بالینی نده. فرض کارگاهی مشخص بده. " +
+    "ورودی رونوشت گفتار فارسی با غلط املایی است؛ معنی را حدس بزن. " +
+    "خروجی فقط یک شیء جیسون با همین کلیدهای لاتین: title, vaghee, negah, naqab, olgo, dokon, tars, darun, sen, jumle. " +
+    "هیچ کلید را خالی نگذار اگر واقعه دست‌کم یک صحنه دارد. " +
+    "vaghee: فقط دوربین؛ غلط گفتار را درست کن؛ تفسیر نگذار. " +
+    "negah: چشم تو کجا بود، چشم او کجا بود. " +
+    "naqab: کدام نسخه از تو جلو آمد تا زنده بماند. " +
+    "olgo: محرک، کار بدن، کار دهان، بعد چه شد. " +
+    "dokon: اگر آرام می‌ماندی چه کار سختی لازم بود. " +
+    "tars: مبادا چه. " +
+    "darun: گلو، سینه، صورت، زمان. " +
+    "sen: سه احتمال کوتاه؛ یکی را که بدن گرم می‌کند مشخص کن. " +
+    "jumle: یک جمله که با «شاید» شروع شود. فارسی روان، کوتاه، ملموس.";
+
+  function parseHelpFields(text) {
+    const s = String(text || "");
+    const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    let raw = fence ? fence[1] : "";
+    if (!raw) {
+      const m = s.match(/\{[\s\S]*\}/);
+      raw = m ? m[0] : "";
+    }
+    if (!raw) throw new Error("no json");
+    let obj;
+    try {
+      obj = JSON.parse(raw);
+    } catch (e) {
+      obj = JSON.parse(raw.replace(/,\s*([}\]])/g, "$1"));
+    }
+    const map = {
+      نگاه: "negah",
+      "نقاب و نقش": "naqab",
+      نقاب: "naqab",
+      الگو: "olgo",
+      "الگوی رفتاری": "olgo",
+      دکان: "dokon",
+      "ترس و مبادا": "tars",
+      ترس: "tars",
+      "تجربهٔ درونی": "darun",
+      درون: "darun",
+      سناریوها: "sen",
+      "جملهٔ آزمایشی ته": "jumle",
+      "جملهٔ ته": "jumle",
+      واقعه: "vaghee",
+      عنوان: "title"
+    };
+    const out = {};
+    Object.keys(obj || {}).forEach(function (k) {
+      const key = map[k] || k;
+      const val = obj[k];
+      if (val == null) return;
+      out[key] = typeof val === "string" ? val.trim() : String(val);
+    });
+    if (!out.negah && !out.naqab && !out.olgo) throw new Error("thin");
+    return out;
+  }
+
+  async function helpOpen(body) {
+    const user =
+      "عنوان: " +
+      (body.title || "") +
+      "\nرونوشت خام گفتار:\n" +
+      (body.vaghee || body.transcript || "") +
+      "\nهر ستون را پر کن. خروجی فقط جیسون.";
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 40000) : 0;
+    try {
+      const r = await fetch("https://text.pollinations.ai/openai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          model: "openai-fast",
+          private: true,
+          messages: [
+            { role: "system", content: HELP_SYS },
+            { role: "user", content: user }
+          ]
+        }),
+        signal: ctrl ? ctrl.signal : undefined
+      });
+      if (!r.ok) throw new Error("open " + r.status);
+      const j = await r.json();
+      const text =
+        (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) ||
+        (j && j.content) ||
+        "";
+      return { ok: true, fields: parseHelpFields(text) };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
   async function helpFill(body) {
+    try {
+      return await helpOpen(body);
+    } catch (e) {}
     return api("/help", "POST", body);
   }
   async function transcribe(audio, mime) {

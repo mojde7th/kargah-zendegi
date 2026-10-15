@@ -3,3 +3,7 @@ Thumbs.db
 *.tmp
 photos/08_Medical_Records/
 photos/13_Financial_Admin/
+node_modules/
+package-lock.json
+_dl.py
+_ins.py
