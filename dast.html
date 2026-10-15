@@ -24,6 +24,7 @@ h1{font-size:1.25rem;margin:0 0 6px;color:#7dd3c7}
 label{display:block;font-weight:800;font-size:.82rem;color:var(--gold);margin:8px 0 4px}
 input,textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:16px/1.8 Vazirmatn,Tahoma,sans-serif;padding:10px}
 textarea{resize:vertical;min-height:64px}
+.grid textarea{min-height:220px;font-size:15px;line-height:1.75}
 #liveBox{min-height:168px;font-size:17px;border:1px solid var(--gold)}
 .recbar{display:flex;gap:12px;align-items:center;margin:4px 0 8px;padding:10px 12px;background:#efe6d4;border-radius:12px}
 .recbtn{flex:0 0 auto;min-width:108px;height:52px;border-radius:12px;border:0;background:var(--red);color:#fff;font:800 16px Vazirmatn,sans-serif;cursor:pointer}
@@ -62,12 +63,12 @@ textarea{resize:vertical;min-height:64px}
 </div>
 <div class="wrap">
   <h1>فرم خالی واقعه</h1>
-  <p class="sub">واقعه را بنویس یا ضبط کن. پیشنهاد ستون‌ها از روی همان متن پر می‌شود. اگر تبدیل بی‌ربط بود، متن دستی می‌ماند.</p>
+  <p class="sub">واقعه را بنویس. پیشنهاد ستون‌ها مثل جلسه است: هر ستون ده لایه. فرض کارگاهی است، نه حکم. اگر با بدنت نخواند خط بزن.</p>
   <div id="list"></div>
   <p class="sub" style="margin-top:18px">اگر تبدیل غلط بود یا ستون نیامد، کلید سرویس ایرانی را یک‌بار بچسبان. روی همین گوشی می‌ماند.</p>
   <input id="irKey" type="password" placeholder="کلید سرویس ایرانی" style="direction:ltr;text-align:left;width:100%;max-width:520px;padding:10px;border-radius:10px;border:1px solid #334155;background:#151b24;color:#eef4fa;font:15px Vazirmatn,sans-serif"/>
 </div>
-<script src="workshop-sync.js?v=17"></script>
+<script src="workshop-sync.js?v=18"></script>
 <script>
 const LS = "form-vaghee-class-v1";
 const FIELDS = [
@@ -80,13 +81,13 @@ const FIELDS = [
   ["jumle", "جملهٔ آزمایشی ته"]
 ];
 const HINTS = {
-  naqab: "کدام نسخه از تو جلو آمد تا زنده بماند.",
-  olgo: "محرک، کار بدن، کار دهان، بعد چه شد.",
-  dokon: "اگر آرام می‌ماندی، چه کار سختی لازم بود.",
-  tars: "مبادا چه.",
-  darun: "گلو، سینه، صورت، زمان.",
-  sen: "سه احتمال. همان را که بدن گرم کرد نگه دار.",
-  jumle: "با شاید شروع کن."
+  naqab: "ده لایه. کدام نسخه جلو آمد تا زنده بماند. فرض جلسه است.",
+  olgo: "ده لایه. محرک، بدن، دهان، بعد، حلقه.",
+  dokon: "ده لایه. از فروپاشی چه خریدی که اگر آرام می‌ماندی باید می‌پرداختی.",
+  tars: "ده لایه. مبادا چه. دو قطب دیدن و ندیدن.",
+  darun: "ده لایه. گلو، سینه، صورت، زمان درونی.",
+  sen: "ده لایه سناریو. همان را که بدن گرم کرد نگه دار.",
+  jumle: "ده جملهٔ آزمایشی با شاید. یکی را ته جلسه بردار."
 };
 const COLS = ["naqab", "olgo", "dokon", "tars", "darun", "sen", "jumle"];
 function faNum(n) {
@@ -245,13 +246,13 @@ function paint() {
     const grid = el("div", { class: "grid" });
     FIELDS.forEach(([k, lab], idx) => {
       const box = document.createElement("div");
-      if (idx >= 6) box.style.gridColumn = "1 / -1";
+      box.style.gridColumn = "1 / -1";
       box.appendChild(el("label", {}, lab));
       box.appendChild(el("p", { class: "hint" }, HINTS[k] || ""));
       const ta = document.createElement("textarea");
       ta.dataset.k = k;
       ta.dataset.i = String(i);
-      ta.rows = k === "sen" ? 3 : 2;
+      ta.rows = 10;
       ta.value = it[k] || "";
       box.appendChild(ta);
       grid.appendChild(box);
