@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>فرم واقعه — نگاه، نقش، دکان</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --paper:#f6efe2;
+  --ink:#2a241c;
+  --line:#c9b89a;
+  --soft:#efe6d4;
+  --gold:#7a5c2e;
+  --screen:#1b1712;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--screen);color:var(--paper);font:16px/1.85 Vazirmatn,Tahoma,sans-serif}
+.toolbar{position:sticky;top:0;z-index:20;background:#14110d;border-bottom:1px solid #3a3328;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar a,.toolbar button{font:700 14px Vazirmatn,sans-serif;background:#2a241c;color:var(--paper);border:1px solid #5a4e3c;border-radius:10px;padding:8px 12px;min-height:40px;cursor:pointer;text-decoration:none}
+.wrap{max-width:880px;margin:0 auto;padding:18px 14px 80px}
+h1{font-size:1.25rem;margin:0 0 8px;color:#e8d7b0}
+.sub{color:#cbbda6;margin:0 0 16px}
+.sheet{
+  background:var(--paper);
+  color:var(--ink);
+  border:1px solid #d8c7a8;
+  border-radius:6px;
+  padding:22px 20px 28px;
+  margin:0 0 28px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+.sheet h2{margin:0 0 6px;font-size:1.15rem;color:var(--gold);border-bottom:2px solid var(--gold);padding-bottom:6px}
+.headrow{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.headrow input{flex:1}
+label{display:block;font-weight:800;font-size:.82rem;color:var(--gold);margin:10px 0 4px}
+input,textarea{
+  width:100%;
+  border:0;
+  border-bottom:1px dashed var(--line);
+  background:transparent;
+  color:var(--ink);
+  font:16px/1.8 Vazirmatn,Tahoma,sans-serif;
+  padding:6px 2px;
+  resize:vertical;
+}
+textarea{border:1px dashed var(--line);border-radius:4px;padding:8px;background:rgba(255,255,255,.35);min-height:72px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.del{background:transparent;border:1px solid var(--line);color:#7a3b2e;border-radius:8px;padding:6px 10px;font:700 13px Vazirmatn,sans-serif;cursor:pointer}
+.hint{font-size:.85rem;color:#cbbda6}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+@media print{
+  body{background:#fff}
+  .toolbar,.hint{display:none!important}
+  .wrap{max-width:none;padding:0}
+  .sheet{box-shadow:none;border:1px solid #b9a57e;border-radius:0;break-after:page;margin:0}
+  a{display:none}
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <a href="workshop-neshast.html">جلسه</a>
+  <a href="index.html">فهرست</a>
+  <button type="button" id="btnAdd">واقعهٔ خالی</button>
+  <button type="button" id="btnSave">ذخیره</button>
+  <button type="button" id="btnPrint">چاپ یا پی‌دی‌اف</button>
+  <button type="button" id="btnTxt">خروجی متن</button>
+  <button type="button" id="btnReset">برگشت به پیش‌نویس جلسه</button>
+</div>
+<div class="wrap">
+  <h1>فرم واقعه</h1>
+  <p class="sub">تایپ کن. ذخیره در همین مرورگر می‌ماند. برای پی‌دی‌اف دکمهٔ چاپ را بزن و مقصد را ذخیره به صورت پرونده بگذار.</p>
+  <p class="hint">خانه‌ها: واقعه، نگاه، نقاب و نقش، الگو، دکان، ترس و مبادا، درون، سناریوها، جملهٔ ته.</p>
+  <div id="list"></div>
+</div>
+<script>
+const LS = "form-neshast-v1";
+const FIELDS = [
+  ["vaghee", "واقعه"],
+  ["negah", "نگاه"],
+  ["naqab", "نقاب و نقش"],
+  ["olgo", "الگوی رفتاری"],
+  ["dokon", "دکان"],
+  ["tars", "ترس و مبادا"],
+  ["darun", "تجربهٔ درونی"],
+  ["sen", "سناریوها"],
+  ["jumle", "جملهٔ آزمایشی ته"]
+];
+const SEED = [
+  {
+    title: "خداحافظی بی‌جواب",
+    vaghee: "خداحافظی کردم. جواب نیامد. یکی دو ساعت حالم بد ماند. سلام بی‌جواب هم مرا همین‌طور به هم می‌ریزد.",
+    negah: "مدار را فرستادم. چیزی برنگشت. چشم و گوش روی جای خالی ماند.",
+    naqab: "آدم مؤدب تمام‌کننده. کسی که وجودش باید با یک کلمهٔ برگشتی مهر بخورد.",
+    olgo: "بستن صحنه، سکوت، قفل توجه، نشخوار، خراب شدن ساعت‌ها.",
+    dokon: "حال خراب از پرسیدن معاف می‌کند. اگر آرام می‌ماندم باید می‌پذیرفتم وجودم به جواب او قفل نیست.",
+    tars: "مبادا برای کسی واقعی نباشم. مبادا حرفم در هوا بمیرد.",
+    darun: "سینه خالی. گوش منتظر. زمان چسبناک.",
+    sen: "الف: زخم نادیده شدن کهنه. ب: هویت مؤدب با تمام شدن آداب زنده است. ج: حتی خروج هم مال من نشد.",
+    jumle: "شاید آن یکی دو ساعت سوگ یک نگاه برگشتی بوده، نه عصبانیت از بی‌ادبی."
+  },
+  {
+    title: "سلام خانم خوشگل",
+    vaghee: "مرد متأهل اتاق بغلی گفت سلام خانم خوشگل. به هم ریختم. مرز نگذاشتم. نرم‌تر شدم. فردا گفتم قربونت برم.",
+    negah: "نگاه او نام بدن را وسط کار آورد. نگاه من بعد روی خودم بود: آیا لرزش معلوم شد.",
+    naqab: "زن عادی محل کار. کسی که نباید صحنه را سنگین کند.",
+    olgo: "جمله، شوک، لبخند و ادامه، فردا گرمای اضافه.",
+    dokon: "لبخند جمله را شوخی نگه می‌دارد. قربونت برم رد لرزش را پاک می‌کند. مرز یعنی تنش واقعی.",
+    tars: "مبادا سختگیر باشم. مبادا معلوم شود این حرف به من نشست.",
+    darun: "شرم در صورت. لبخند جدا از سینه.",
+    sen: "الف: فاون در برابر مرد نزدیک. ب: ترس از زن مشکل‌ساز. ج: می‌خواهم دیده شوم و از دیده شدن می‌ترسم.",
+    jumle: "شاید قربونت برم مال محبت نبود؛ مال پاک کردن رد لرزش بود."
+  },
+  {
+    title: "برنامه‌نویسم",
+    vaghee: "سر میز قرار گفت برنامه‌نویسم. حالم بد شد. خودم هم وقتی این را می‌گویم گاهی همان طعم بد می‌آید.",
+    negah: "شغل روی میز وزن می‌شود. چشم‌ها ارزش را می‌سنجند.",
+    naqab: "دختر فنی بدون صندلی وسط. یا متکبر یا دروغگو.",
+    olgo: "شنیدن ادعا، جمع شدن، بیزاری، میل به کوچک شدن.",
+    dokon: "حال بد از صندلی برنامه‌نویس پرت می‌کند پایین. نیمه‌کاره ماندن یعنی هنوز قضاوت نهایی نشده.",
+    tars: "مبادا متکبر باشم. مبادا رسوا شوم.",
+    darun: "جمع شدن شکم. بیزاری از لحن، که شاید لحن خیالی خودم باشد.",
+    sen: "الف: آینهٔ جا گرفتن بدون شرم. ب: مهارت شد کالا. ج: هنوز اجازهٔ درونی برای من بلدم نیست.",
+    jumle: "شاید حال بد از شغل او نبود؛ از این بود که او بدون شرم جایی را گرفت که من با شرم می‌گیرم."
+  },
+  {
+    title: "خوشم میاد در کلاس",
+    vaghee: "دختری گفت خیلی ازت خوشم میاد. معذب شدم. نازک جواب دادم. بعد نگاهش را اسکن می‌کردم.",
+    negah: "اول او انتخاب کرد. بعد من نگهبان چشم او شدم و از خودم بیرون آمدم.",
+    naqab: "شاگرد خوب که تعریف را پس می‌دهد.",
+    olgo: "جمله، شوک، مرسی نازک، اسکن چشم، خراب شدن حضور.",
+    dokon: "حال بد از رابطهٔ تازه معاف می‌کند. شاگرد بودن امن‌تر از محبوب بودن است.",
+    tars: "مبادا مدیون شوم. مبادا خاص شوم و بعد خراب شوم.",
+    darun: "گرمای شرم. توجه دزدیده شده.",
+    sen: "الف: تعریف مثل دست‌اندازی. ب: ترس از جواب دادن به انتخاب شدن. ج: مدار زیادی دیده شدن.",
+    jumle: "شاید حال بد از تعریف نبود؛ از خانه کردن ناگهانی در چشم کسی بود."
+  },
+  {
+    title: "مادر و گوش",
+    vaghee: "گفتم بیا پذیرایی تا بشنوی. گفت پس تو برو دکتر.",
+    negah: "خواستم فاصله را کم کنم. او نگاه را روی نقص خیالی من برگرداند.",
+    naqab: "دختر منطقی. فرزندی که مادر را به بزرگ‌تری برنمی‌گرداند.",
+    olgo: "پیشنهاد، تلافی، این چه بچگی است، خشم و سوگ.",
+    dokon: "خشم مرا عاقل نگه می‌دارد تا با این غم ننشینم که او گاهی مادر نمی‌ماند.",
+    tars: "مبادا هیچ‌وقت مادر بزرگ در خانه نباشد. مبادا حرفم همیشه حمله شنیده شود.",
+    darun: "گلو. خشم داغ. غم زیر خشم.",
+    sen: "الف: الگوی تلافی کهنه. ب: انتظار ترمیم و نرسیدن. ج: خشم از عوض نشدن او.",
+    jumle: "شاید به هم ریختن از بی‌ادبی نبود؛ از لحظه‌ای بود که مادر، مادر نماند."
+  },
+  {
+    title: "لیوان و قهوه‌ساز",
+    vaghee: "لیوان شسته را جایی گذاشتم که بغل قهوه‌ساز نباشد. مادر گذاشت بغل قهوه‌ساز. حالم بد شد.",
+    negah: "چشم من روی نظم خودم. دست او اثر مرا پاک کرد.",
+    naqab: "صاحب یک گوشه. دختری که برای یک لیوان هم باید بجنگد.",
+    olgo: "دیدن جابه‌جایی، خشم، داستان نفهمی، واکنش بزرگ‌تر از لیوان.",
+    dokon: "جنگ سر لیوان از گفتن این خانه جایی برای ارادهٔ من کم است معاف می‌کند.",
+    tars: "مبادا هیچ گوشه‌ای مال من نباشد. مبادا اگر بگویم بچگی به من برگردد.",
+    darun: "گرمای خشم. حس پاک شدن یک کار کوچک.",
+    sen: "الف: نماد همهٔ نادیده‌گرفتن‌های خانه. ب: پاک شدن اثر دست. ج: انباشت امروز.",
+    jumle: "شاید حال بد از ظرف نبود؛ از عوض شدن جای من بدون پرسیدن بود."
+  },
+  {
+    title: "خراب کردن روز",
+    vaghee: "نزدیک آخر روز طوری خراب می‌کنم که بگویم امروز رفت، پس رژیم هم برود. قبلاً بیست سی روز آورده بودم.",
+    negah: "چشم روی ساعت آخر. منتظر بهانه.",
+    naqab: "آدم کامل یا هیچ. خرابکار مهربانی که به خودش مرخصی اجباری می‌دهد.",
+    olgo: "روز خوب، تنگی تمام شدن، لغزش، امروز که رفت، باز کردن در.",
+    dokon: "خراب شدن مجوز استراحت است. روز کامل یعنی هویت تازه و انتظار تازه.",
+    tars: "مبادا بتوانم. مبادا دیگر بهانه‌ای نماند.",
+    darun: "بی‌قراری غروب. آرامش تلخ بعد از خراب کردن.",
+    sen: "الف: ضد اضطراب موفقیت. ب: شورش علیه قانون سخت. ج: نپذیرفتن اینکه خودم اجازه ندادم.",
+    jumle: "شاید نمی‌خواهم رژیم بماند؛ می‌خواهم راه فرار به نسخهٔ آشنا باز بماند."
+  },
+  {
+    title: "شرم تکرار قرار",
+    vaghee: "چند بار رفتم. امروز معذبم. می‌ترسم آدم تکراری بیاید یا خودم تکراری شوم.",
+    negah: "چشم خیالی جمع روی شمارش دفعات من.",
+    naqab: "آدم سبک و اتفاقی. کسی که نباید گرسنهٔ رابطه دیده شود.",
+    olgo: "خواستن، رفتن، نیافتن، شرم از خواستن، اسکن در.",
+    dokon: "شرم نیمه می‌برد تا کاملاً وارد بازار دیده شدن نشوم.",
+    tars: "مبادا محتاج به نظر برسم. مبادا همه بفهمند تنها هستم.",
+    darun: "جمع شدن. گرمای شرم در صورت.",
+    sen: "الف: نگهبان آبرو. ب: تکرار یعنی کم‌ارزشی. ج: وارونهٔ ترس نادیده شدن.",
+    jumle: "شاید معذب بودن از قرار نیست؛ از علنی خواستن است."
+  },
+  {
+    title: "استاد و همه جا هست",
+    vaghee: "با همان استاد به نامه‌خوانی می‌روم. می‌ترسم بگوید چقدر علاقه، همه جا هست، تکراری.",
+    negah: "نگاه خیالی استاد شمارندهٔ حضور من است.",
+    naqab: "شاگرد سبک. دختری که علاقه باید پنهان باشد.",
+    olgo: "خواستن دو برنامه، تصویر قضاوت، شرم، میل به کم شدن.",
+    dokon: "اگر نروم تکراری نمی‌شوم. قیمتش نرفتن به جایی است که دوست دارم.",
+    tars: "مبادا بچسبم. مبادا در چشم او زیاد و کم‌ارزش شوم.",
+    darun: "جمع شدن شانه. شرم پیش از وقوع.",
+    sen: "الف: استاد شده چشم بزرگ. ب: علاقه یعنی چسبندگی. ج: همان شرم تکرار قرار.",
+    jumle: "شاید ترس این نیست که استاد خسته شود؛ ترس خوانده شدن خواستن روی صورت من است."
+  }
+];
+
+function blank() {
+  const o = { title: "" };
+  FIELDS.forEach(([k]) => { o[k] = ""; });
+  return o;
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS));
+    if (s && Array.isArray(s.items) && s.items.length) return s.items;
+  } catch (e) {}
+  return SEED.map((x) => Object.assign({}, x));
+}
+function save(items) {
+  localStorage.setItem(LS, JSON.stringify({ items: items }));
+}
+function el(tag, attrs, html) {
+  const n = document.createElement(tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => n.setAttribute(k, v));
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+let items = load();
+const list = document.getElementById("list");
+
+function paint() {
+  list.innerHTML = "";
+  items.forEach((it, i) => {
+    const sheet = el("article", { class: "sheet", "data-i": String(i) });
+    const head = el("div", { class: "headrow" });
+    const t = el("input", { "data-k": "title", "data-i": String(i), value: it.title || "", placeholder: "عنوان واقعه" });
+    t.value = it.title || "";
+    const del = el("button", { type: "button", class: "del", "data-del": String(i) }, "حذف");
+    head.appendChild(t);
+    head.appendChild(del);
+    const fa = String(i + 1).replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+    sheet.appendChild(el("h2", {}, "برگهٔ " + fa + " — فرم واقعه"));
+    sheet.appendChild(head);
+    const grid = el("div", { class: "grid" });
+    FIELDS.forEach(([k, lab], idx) => {
+      const box = document.createElement("div");
+      if (idx === 0 || idx >= 7) box.style.gridColumn = "1 / -1";
+      box.appendChild(el("label", {}, lab));
+      const ta = document.createElement("textarea");
+      ta.dataset.k = k;
+      ta.dataset.i = String(i);
+      ta.rows = k === "vaghee" || k === "sen" ? 4 : 3;
+      ta.value = it[k] || "";
+      box.appendChild(ta);
+      grid.appendChild(box);
+    });
+    sheet.appendChild(grid);
+    list.appendChild(sheet);
+  });
+}
+function readDom() {
+  items.forEach((_, i) => {
+    const root = list.querySelector('.sheet[data-i="' + i + '"]');
+    if (!root) return;
+    root.querySelectorAll("[data-k]").forEach((n) => {
+      items[i][n.dataset.k] = n.value;
+    });
+  });
+}
+list.addEventListener("input", () => { readDom(); save(items); });
+list.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-del]");
+  if (!b) return;
+  readDom();
+  items.splice(+b.dataset.del, 1);
+  save(items);
+  paint();
+});
+document.getElementById("btnAdd").onclick = () => {
+  readDom();
+  items.push(blank());
+  save(items);
+  paint();
+  window.scrollTo(0, document.body.scrollHeight);
+};
+document.getElementById("btnSave").onclick = () => { readDom(); save(items); alert("ذخیره شد"); };
+document.getElementById("btnPrint").onclick = () => { readDom(); save(items); window.print(); };
+document.getElementById("btnReset").onclick = () => {
+  if (!confirm("پیش‌نویس جلسه جای نوشته‌های فعلی را بگیرد؟")) return;
+  items = SEED.map((x) => Object.assign({}, x));
+  save(items);
+  paint();
+};
+document.getElementById("btnTxt").onclick = () => {
+  readDom();
+  save(items);
+  let out = "فرم واقعه\n" + new Date().toLocaleString("fa-IR") + "\n\n";
+  items.forEach((it, i) => {
+    out += "—— " + (it.title || ("واقعه " + (i + 1))) + " ——\n";
+    FIELDS.forEach(([k, lab]) => { out += lab + ":\n" + (it[k] || "—") + "\n\n"; });
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([out], { type: "text/plain;charset=utf-8" }));
+  a.download = "form-vaghee.txt";
+  a.click();
+};
+paint();
+</script>
+</body>
+</html>
