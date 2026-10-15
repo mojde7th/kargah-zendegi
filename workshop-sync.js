@@ -539,9 +539,65 @@
       "";
     return String(t || "").trim();
   }
+  function clipFa(s, n) {
+    s = String(s || "").replace(/\s+/g, " ").trim();
+    if (s.length <= n) return s;
+    return s.slice(0, n).replace(/[،,\s]+[^\s]*$/, "") + "…";
+  }
+  function splitFa(vg) {
+    return String(vg || "")
+      .split(/[\n.؟!]+/)
+      .map(function (x) { return x.trim(); })
+      .filter(function (x) { return x.length > 5; });
+  }
+  function localHelp(body) {
+    const vg = String((body && (body.vaghee || body.transcript)) || "").trim();
+    const ss = splitFa(vg);
+    const a = ss[0] || clipFa(vg, 90);
+    const b = ss[1] || a;
+    const c = ss[ss.length - 1] || a;
+    const mid = ss[Math.min(1, Math.max(0, ss.length - 1))] || b;
+    return {
+      ok: true,
+      via: "local",
+      fields: {
+        title: clipFa(a, 42),
+        vaghee: vg,
+        naqab:
+          "از همین صحنه، نسخه‌ای که جلو آمد همان است که این کار را کرد: «" +
+          clipFa(a, 120) +
+          "». نقش جدا نساز؛ همین نقش برای زنده ماندن در این لحظه است.",
+        olgo:
+          "محرک: «" +
+          clipFa(a, 80) +
+          "». کار بدن و دهان: «" +
+          clipFa(mid, 80) +
+          "». بعد: «" +
+          clipFa(c, 80) +
+          "».",
+        dokon:
+          "اگر آرام می‌ماندی، کار سخت نگه داشتن همین صحنه بود: «" +
+          clipFa(vg, 130) +
+          "».",
+        tars: "مبادا از فشار همین متن می‌آید: «" + clipFa(b, 110) + "».",
+        darun:
+          "گلو و سینه را از خود واقعه بخوان؛ فشار اینجاست: «" +
+          clipFa(mid, 100) +
+          "».",
+        sen:
+          "۱) همین که نوشته شد بماند. ۲) زودتر قطع شود. ۳) ته صحنه یک جمله عوض شود. بدن همان را گرم می‌کند که در متن است: «" +
+          clipFa(c, 90) +
+          "».",
+        jumle:
+          "شاید اگر در همان لحظه فقط همین را می‌گفتم، جور دیگری تمام می‌شد: «" +
+          clipFa(c, 90) +
+          "»."
+      }
+    };
+  }
   async function fetchWait(url, opt, ms) {
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 25000) : 0;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 7000) : 0;
     try {
       const r = await fetch(url, Object.assign({}, opt, { signal: ctrl ? ctrl.signal : undefined }));
       return r;
@@ -564,7 +620,7 @@
             method: "POST",
             headers: { Authorization: "Bearer " + key },
             body: fd
-          }, 28000);
+          }, 8000);
           if (!r.ok) continue;
           const tx = pickText(await r.json());
           if (tx) return { ok: true, text: tx, via: "iran" };
@@ -579,7 +635,7 @@
       const r = await fetchWait("https://api.ivira.ai/partai/avanegar", {
         method: "POST",
         body: fd
-      }, 28000);
+      }, 7000);
       if (r.ok) {
         const tx = pickText(await r.json());
         if (tx) return { ok: true, text: tx, via: "ivira" };
@@ -593,7 +649,7 @@
           headers: { Accept: "application/json", "Content-Type": "audio/wav" },
           body: blob
         },
-        40000
+        8000
       );
       if (r.ok) {
         const tx = pickText(await r.json());
@@ -628,46 +684,13 @@
               Authorization: "Bearer " + key
             },
             body: JSON.stringify(payload)
-          }, 40000);
+          }, 8000);
           if (!r.ok) continue;
           const tx = pickText(await r.json());
           if (tx) return { ok: true, fields: parseHelpFields(tx) };
         } catch (e) {}
       }
     }
-    try {
-      const r = await fetchWait("https://api.ivira.ai/cloudinno/chitChatBot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: HELP_SYS + "\n\n" + user,
-          text: user,
-          prompt: HELP_SYS + "\n\n" + user
-        })
-      }, 40000);
-      if (r.ok) {
-        const tx = pickText(await r.json());
-        if (tx) return { ok: true, fields: parseHelpFields(tx) };
-      }
-    } catch (e) {}
-    try {
-      const r = await fetchWait(
-        "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({
-            inputs: HELP_SYS + "\n\n" + user,
-            parameters: { max_new_tokens: 700, temperature: 0.2, return_full_text: false }
-          })
-        },
-        40000
-      );
-      if (r.ok) {
-        const tx = pickText(await r.json());
-        if (tx) return { ok: true, fields: parseHelpFields(tx) };
-      }
-    } catch (e) {}
     throw new Error("iran help");
   }
 
@@ -679,7 +702,7 @@
       (body.vaghee || body.transcript || "") +
       "\nهر ستون را پر کن. خروجی فقط جیسون.";
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 40000) : 0;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 7000) : 0;
     try {
       const r = await fetch("https://text.pollinations.ai/openai", {
         method: "POST",
@@ -708,12 +731,20 @@
 
   async function helpFill(body) {
     try {
-      return await helpIran(body);
+      const r = await helpIran(body);
+      if (r && r.fields) return r;
     } catch (e) {}
     try {
-      return await helpOpen(body);
+      const r = await helpOpen(body);
+      if (r && r.fields) return r;
     } catch (e) {}
-    return api("/help", "POST", body);
+    try {
+      const r = await api("/help", "POST", body);
+      if (r && (r.fields || r.naqab || r.olgo)) {
+        return r.fields ? r : { ok: true, fields: r };
+      }
+    } catch (e) {}
+    return localHelp(body);
   }
   async function transcribe(audio, mime) {
     if (audio && typeof audio.size === "number") {
@@ -758,6 +789,7 @@
     transcribe: transcribe,
     transcribeIran: transcribeIran,
     helpIran: helpIran,
+    localHelp: localHelp,
     getIrKey: getIrKey,
     setIrKey: setIrKey,
     pickApi: pickApi,
