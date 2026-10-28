@@ -50,6 +50,11 @@ window.WorkshopReadkit = function (cfg) {
   const toc = $("#toc");
   if (!main || !toc) return;
 
+  if (window.matchMedia("(max-width: 800px)").matches) {
+    const lay = $("#layout");
+    if (lay) lay.classList.add("toc-off");
+  }
+
   if (!document.getElementById("readkit-layout-extra")) {
     const style = document.createElement("style");
     style.id = "readkit-layout-extra";
@@ -66,7 +71,21 @@ window.WorkshopReadkit = function (cfg) {
       "html.hdr-off{--hdr:56px}\n" +
       "html.hdr-off .freeze .widgets,html.hdr-off .freeze .hint{display:none!important}\n" +
       "html.hdr-off .freeze{padding:6px 10px}\n" +
-      "#btnHdr{margin-right:auto}\n";
+      "#btnHdr{margin-right:auto}\n" +
+      "@media (max-width:800px){\n" +
+      "html,body{font-size:18px}\n" +
+      ".freeze{padding:8px 8px 6px}\n" +
+      ".row{gap:6px}\n" +
+      ".row button{flex:1 1 42%;min-height:46px}\n" +
+      ".widgets{grid-template-columns:1fr 1fr!important}\n" +
+      ".hint{display:none}\n" +
+      ".layout{grid-template-columns:1fr!important}\n" +
+      ".pager{padding:8px 10px calc(8px + env(safe-area-inset-bottom))}\n" +
+      ".pager button{min-height:48px;min-width:104px;font-size:17px}\n" +
+      "main{padding-bottom:calc(108px + env(safe-area-inset-bottom))}\n" +
+      "#searchBox,.notebox{font-size:16px}\n" +
+      ".steps li{padding:12px 12px}\n" +
+      "}\n";
     document.head.appendChild(style);
   }
 
